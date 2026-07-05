@@ -3,7 +3,7 @@
 # Usage: In each .bats file, add:
 #   load test_helper
 
-# Detect project root (two levels up from tests/)
+# Detect project root (two levels up from cicd-tests/)
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export PROJECT_ROOT
 

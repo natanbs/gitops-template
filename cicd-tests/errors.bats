@@ -37,7 +37,7 @@ teardown() {
 
 @test "build.sh exits 0 on successful path" {
   # Use the test temp dir which has a Dockerfile
-  cp "$PROJECT_ROOT/tests/test_helper.bash" "$TEST_TEMP_DIR/"
+  cp "$PROJECT_ROOT/cicd-tests/test_helper.bash" "$TEST_TEMP_DIR/"
   cd "$TEST_TEMP_DIR"
   run "$PROJECT_ROOT/build.sh" \
     --app-name test-app --image-tag v1.0 \

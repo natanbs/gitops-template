@@ -254,19 +254,19 @@ All variables use the `${VARIABLE_NAME}` syntax supported by `envsubst`.
 
 ```bash
 # Run all bats tests
-bats tests/
+bats cicd-tests/
 ```
 
 ### Test Suites
 
 | File                   | Tests                                  |
 |------------------------|----------------------------------------|
-| `tests/arguments.bats` | CLI argument parsing and validation   |
-| `tests/errors.bats`    | Error handling and step failure       |
-| `tests/manifests.bats` | K8s manifest generation and validation|
-| `tests/argocd.bats`    | ArgoCD Application manifest validation|
-| `tests/init_env.bats`  | `init.sh` scaffold + `.env` loading   |
-| `tests/integration.bats` | End-to-end pipeline integration     |
+| `cicd-tests/arguments.bats` | CLI argument parsing and validation   |
+| `cicd-tests/errors.bats`    | Error handling and step failure       |
+| `cicd-tests/manifests.bats` | K8s manifest generation and validation|
+| `cicd-tests/argocd.bats`    | ArgoCD Application manifest validation|
+| `cicd-tests/init_env.bats`  | `init.sh` scaffold + `.env` loading   |
+| `cicd-tests/integration.bats` | End-to-end pipeline integration     |
 
 ---
 
@@ -282,7 +282,7 @@ bats tests/
 │   └── ingress.tmpl.yaml    # Ingress template (optional)
 ├── argocd/                  # ArgoCD manifest templates
 │   └── application.tmpl.yaml # ArgoCD Application template
-├── tests/                   # Bats test suites
+├── cicd-tests/              # Bats test suites
 │   ├── test_helper.bash     # Shared test utilities
 │   ├── arguments.bats
 │   ├── errors.bats
