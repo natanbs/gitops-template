@@ -2,7 +2,9 @@ load test_helper
 
 setup() {
   setup_test_env
-  cd "$TEST_TEMP_DIR"
+  # cd into a subdir so init.sh creates the app in $TEST_TEMP_DIR (parent)
+  mkdir -p "$TEST_TEMP_DIR/init"
+  cd "$TEST_TEMP_DIR/init"
 }
 
 teardown() {

@@ -158,7 +158,7 @@ kubectl cluster-info
 # 1. Scaffold a new Go app
 ./init.sh --app-name my-app --dockerfile go
 
-cd my-app
+cd ../my-app
 
 # 2. Build + deploy in two commands
 ./build.sh --image-tag v1.0

@@ -89,7 +89,7 @@ fi
 
 [ -z "$K8S_NAMESPACE" ] && K8S_NAMESPACE="$APP_NAME"
 
-TARGET_DIR="$PWD/$APP_NAME"
+TARGET_DIR="$(dirname "$PWD")/$APP_NAME"
 
 # ── Clone or copy template ──────────────────────────────────
 if [ -d "$TARGET_DIR" ]; then
@@ -260,7 +260,7 @@ echo "  Registry:  $REGISTRY_URL:$REGISTRY_PORT"
 echo "  Namespace: $K8S_NAMESPACE"
 echo
 echo "Next steps:"
-echo "  cd $APP_NAME"
+echo "  cd ../$APP_NAME"
 echo "  ./build.sh --image-tag v1.0"
 echo "  ./build.sh --image-tag v1.0 --auto-deploy"
 echo

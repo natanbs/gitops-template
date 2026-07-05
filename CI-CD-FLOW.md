@@ -120,7 +120,7 @@ curl -k https://localhost:8081  # ArgoCD UI
 # Clones gitops-template, renames to my-app, inits git, writes .env
 ./init.sh --app-name my-app --dockerfile go
 
-cd my-app
+cd ../my-app
 
 # ── 2. First build (flags come from .env) ──────────────────
 ./build.sh --image-tag v1.0
