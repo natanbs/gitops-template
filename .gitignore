@@ -1,0 +1,24 @@
+# Generated K8s manifests (output from envsubst)
+k8s/*.yaml
+!k8s/*.tmpl.yaml
+
+# Generated ArgoCD manifests
+argocd/*.yaml
+!argocd/*.tmpl.yaml
+
+# Test temp directories
+/tmp/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Docker
+.docker/

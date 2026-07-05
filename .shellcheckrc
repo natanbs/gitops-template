@@ -1,0 +1,12 @@
+# ShellCheck configuration for gitops-template
+# See: https://www.shellcheck.net/wiki/
+
+# Bash is the required shell (not sh)
+shell=bash
+
+# Disable warnings for intentional patterns
+disable=SC1091  # Following source not possible (dynamic paths)
+disable=SC2086  # Double quote to prevent globbing (used in Docker args intentionally)
+disable=SC2016  # Allow '${VAR}' in single quotes (used for envsubst templates)
+disable=SC2154  # VAR referenced but not assigned (sourced from envsubst)
+disable=SC2155  # Declare and assign separately (export pattern)
