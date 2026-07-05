@@ -116,29 +116,29 @@ curl -k https://localhost:8081  # ArgoCD UI
 ### Phase 1: Onboard a New App (one-time per app)
 
 ```bash
-# ── 1. Clone gitops-template alongside your app ─────────────
-git clone https://github.com/natanbs/gitops-template.git
-cd gitops-template
+# ── 1. Scaffold from template ───────────────────────────────
+# Clones gitops-template, renames to my-app, inits git, writes .env
+./init.sh --app-name my-app --dockerfile go
 
-# ── 2. Add app source + Dockerfile ─────────────────────────
-# Place your Dockerfile at the project root
+cd my-app
 
-# ── 3. First build: push image + test ───────────────────────
-./build.sh --app-name my-app --image-tag v1.0 \
-  --registry-url localhost --registry-port 50000
+# ── 2. First build (flags come from .env) ──────────────────
+./build.sh --image-tag v1.0
 
-# ── 4. First deploy: apply to cluster ───────────────────────
-./build.sh --app-name my-app --image-tag v1.0 \
-  --registry-url localhost --registry-port 50000 \
-  --k8s-namespace my-app \
-  --auto-deploy
+# ── 3. First deploy ─────────────────────────────────────────
+./build.sh --image-tag v1.0 --auto-deploy
 
-# ── 5. Enable GitOps: create ArgoCD Application ─────────────
-./build.sh --app-name my-app --image-tag v1.0 \
-  --registry-url localhost --registry-port 50000 \
-  --k8s-namespace my-app \
+# ── 4. Enable GitOps: push + generate ArgoCD Application ───
+git remote add origin https://github.com/your-org/my-app.git
+git push -u origin main
+
+./build.sh --image-tag v1.0 \
   --app-repo-url https://github.com/your-org/my-app.git \
   --auto-deploy
+
+git add argocd/application.yaml
+git commit -m "Add ArgoCD Application manifest"
+git push
 ```
 
 What gets created:
@@ -159,10 +159,8 @@ What gets created:
 # 1. Make code changes
 vim main.go
 
-# 2. Build + deploy in one shot
-./build.sh --app-name my-app --image-tag v1.1 \
-  --registry-url localhost --registry-port 50000 \
-  --auto-deploy
+# 2. Build + deploy in one shot (--app-name from .env)
+./build.sh --image-tag v1.1 --auto-deploy
 
 # 3. Verify
 curl localhost:8090/healthz
@@ -176,8 +174,7 @@ kubectl get pods -n my-app
 vim main.go
 
 # 2. Build + push image (no direct deploy)
-./build.sh --app-name my-app --image-tag v1.1 \
-  --registry-url localhost --registry-port 50000
+./build.sh --image-tag v1.1
 
 # 3. Update manifests and push to git
 git add k8s/ argocd/
@@ -293,8 +290,9 @@ git push
 | Action | Command |
 |--------|---------|
 | Bootstrap cluster | `cd argo-bootstrap && ./argocd.sh` |
-| Build image only | `./build.sh --app-name X --image-tag Y --registry-url localhost --registry-port 50000` |
-| Build + Deploy | `./build.sh --app-name X --image-tag Y --registry-url localhost --registry-port 50000 --auto-deploy` |
+| Scaffold new app | `./init.sh --app-name X --dockerfile go` |
+| Build image only | `./build.sh --image-tag Y` (uses `.env` for app/registry) |
+| Build + Deploy | `./build.sh --image-tag Y --auto-deploy` |
 | Enable GitOps | Add `--app-repo-url https://github.com/...` |
 | Skip failures | Add `--continue-on-error` |
 | Check ArgoCD UI | Open `https://localhost:8081` (admin / ChangeMe) |

@@ -11,19 +11,33 @@ warn()  { printf "${YELLOW}[WARN]${NC}  %s\n" "$*"; }
 error() { printf "${RED}[ERROR]${NC} %s\n" "$*"; }
 step()  { printf "\n${CYAN}=== %s ===${NC}\n" "$*"; }
 
+# ── Load .env (script dir first, then CWD) ─────────────────────────
+_ENV_SOURCE=""
+if [ -f "${PROJECT_ROOT}/.env" ]; then
+  _ENV_SOURCE="${PROJECT_ROOT}/.env"
+elif [ -f ".env" ]; then
+  _ENV_SOURCE=".env"
+fi
+if [ -n "$_ENV_SOURCE" ]; then
+  set -a
+  # shellcheck source=/dev/null
+  . "$_ENV_SOURCE"
+  set +a
+fi
+
 # ── Defaults ───────────────────────────────────────────────────────
 DEFAULT_REGISTRY_URL="${REGISTRY_URL:-k3d-registry.localhost}"
 DEFAULT_REGISTRY_PORT="${REGISTRY_PORT:-5000}"
 DEFAULT_K8S_NAMESPACE="${K8S_NAMESPACE:-default}"
 DEFAULT_CONTAINER_PORT="${CONTAINER_PORT:-8080}"
 
-# ── State ──────────────────────────────────────────────────────────
-APP_NAME=""
-IMAGE_TAG=""
-REGISTRY_URL="$DEFAULT_REGISTRY_URL"
-REGISTRY_PORT="$DEFAULT_REGISTRY_PORT"
-K8S_NAMESPACE="$DEFAULT_K8S_NAMESPACE"
-CONTAINER_PORT="$DEFAULT_CONTAINER_PORT"
+# ── State (preserves .env values, overridable by CLI) ──────────────
+APP_NAME="${APP_NAME:-}"
+IMAGE_TAG="${IMAGE_TAG:-}"
+REGISTRY_URL="${REGISTRY_URL:-$DEFAULT_REGISTRY_URL}"
+REGISTRY_PORT="${REGISTRY_PORT:-$DEFAULT_REGISTRY_PORT}"
+K8S_NAMESPACE="${K8S_NAMESPACE:-$DEFAULT_K8S_NAMESPACE}"
+CONTAINER_PORT="${CONTAINER_PORT:-$DEFAULT_CONTAINER_PORT}"
 APP_REPO_URL=""
 AUTO_DEPLOY=false
 CONTINUE_ON_ERROR=false
@@ -66,6 +80,10 @@ Optional:
 Environment variables:
   REGISTRY_URL, REGISTRY_PORT, K8S_NAMESPACE, CONTAINER_PORT
   can be set instead of passing the corresponding flags.
+
+Dotenv file:
+  If a .env file exists in the project root, it is sourced before
+  argument parsing. CLI flags override .env values.
 
 Examples:
   build.sh --app-name my-app --image-tag v1.0

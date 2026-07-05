@@ -42,80 +42,92 @@ This sets up:
 - ArgoCD installed in the `argocd` namespace
 - Port mapping: `8081:80` (ArgoCD UI), `8090:8090` (app traffic)
 
-### Step 2: Prepare your application
-
-Place a `Dockerfile` at the root of your app directory:
+### Step 2: Scaffold your app project
 
 ```bash
-# Example: simple Go HTTP server
-cat > Dockerfile <<'EOF'
-FROM golang:1.22-alpine AS builder
-WORKDIR /app
-COPY main.go .
-RUN go build -o server main.go
+# One command: copies template, inits git, writes .env, scaffolds Dockerfile
+./init.sh --app-name my-api --dockerfile go
 
-FROM alpine:3.19
-WORKDIR /app
-COPY --from=builder /app/server .
-EXPOSE 8080
-CMD ["./server"]
-EOF
+cd my-api
 ```
+
+This creates `my-api/` with:
+- `build.sh` — the pipeline script
+- `.env` — project config (no need to repeat `--registry-url` etc.)
+- `Dockerfile` — sample Go Dockerfile
+- `k8s/` — K8s manifest templates
+- `argocd/` — ArgoCD Application template
+- Fresh git history
 
 ### Step 3: Build, push, and deploy
 
 ```bash
-# Clone this template alongside your app
-git clone https://github.com/natanbs/gitops-template.git
-cd gitops-template
+# First build (--app-name and registry come from .env)
+./build.sh --image-tag v1.0
 
-# Build Docker image and push to the local registry (port 50000)
-./build.sh --app-name my-app --image-tag v1.0 \
-  --registry-url localhost --registry-port 50000
-
-# Build + deploy to Kubernetes in one command
-./build.sh --app-name my-app --image-tag v1.0 \
-  --registry-url localhost --registry-port 50000 \
-  --k8s-namespace default \
-  --auto-deploy
+# Build + deploy to Kubernetes
+./build.sh --image-tag v1.0 --auto-deploy
 ```
 
 ### Step 4: Full GitOps pipeline
 
 ```bash
-# Build, push, generate manifests, and create ArgoCD Application
-./build.sh --app-name my-app --image-tag v1.0 \
-  --registry-url localhost --registry-port 50000 \
-  --app-repo-url https://github.com/your-org/my-app.git \
+# Push your repo, then generate ArgoCD manifest
+git remote add origin https://github.com/your-org/my-api.git
+git push -u origin main
+
+./build.sh --image-tag v1.0 \
+  --app-repo-url https://github.com/your-org/my-api.git \
   --auto-deploy
+
+git add argocd/application.yaml
+git commit -m "Add ArgoCD Application manifest"
+git push
 ```
 
-From this point, ArgoCD watches the repo and auto-syncs changes.
+ArgoCD now watches the repo and auto-syncs changes.
 
 ---
 
-### Common build scenarios
+### Common scenarios
 
 **Using a custom registry (Docker Hub, ECR, GCR):**
 ```bash
-./build.sh --app-name my-app --image-tag v1.0 \
-  --registry-url docker.io \
-  --registry-port 443
+# Edit .env
+sed -i '' 's/REGISTRY_URL=.*/REGISTRY_URL=docker.io/' .env
+sed -i '' 's/REGISTRY_PORT=.*/REGISTRY_PORT=443/' .env
+
+# Or override on the CLI (takes precedence)
+./build.sh --image-tag v1.0 --registry-url docker.io --registry-port 443
 ```
 
 **Building for a specific namespace:**
 ```bash
-./build.sh --app-name my-app --image-tag v1.0 \
-  --registry-url localhost --registry-port 50000 \
-  --k8s-namespace production \
-  --auto-deploy
+# Edit .env or use --k8s-namespace
+./build.sh --image-tag v1.0 --k8s-namespace production --auto-deploy
+```
+
+**Scaffolding without init.sh (copy template manually):**
+```bash
+git clone https://github.com/natanbs/gitops-template.git my-app
+cd my-app
+rm -rf .git
+git init
+git add .
+git commit -m "Initial scaffold from gitops-template"
+# Write your own .env:
+cat > .env <<'EOF'
+APP_NAME=my-app
+REGISTRY_URL=localhost
+REGISTRY_PORT=50000
+K8S_NAMESPACE=my-app
+CONTAINER_PORT=8080
+EOF
 ```
 
 **Recovering from a partial failure:**
 ```bash
-./build.sh --app-name my-app --image-tag v1.0 \
-  --registry-url localhost --registry-port 50000 \
-  --continue-on-error
+./build.sh --image-tag v1.0 --continue-on-error
 ```
 
 ---
@@ -143,46 +155,63 @@ kubectl cluster-info
 ## Quickstart (minimal)
 
 ```bash
-# 1. Copy build.sh into your project
-cp -r <gitops-template>/* .
+# 1. Scaffold a new Go app
+./init.sh --app-name my-app --dockerfile go
 
-# 2. Add your Dockerfile at the root
+cd my-app
 
-# 3. Build, tag, and push your image
-./build.sh --app-name my-app --image-tag v1.0
-
-# 4. Build + deploy to Kubernetes
-./build.sh --app-name my-app --image-tag v1.0 --auto-deploy
+# 2. Build + deploy in two commands
+./build.sh --image-tag v1.0
+./build.sh --image-tag v1.0 --auto-deploy
 ```
 
 ---
 
 ## CLI Reference
 
-### Required Arguments
+### `init.sh` — Scaffold a new project
 
-| Argument       | Description                                          |
-|----------------|------------------------------------------------------|
-| `--app-name`   | Application name (k8s-safe: lowercase, hyphens only) |
-| `--image-tag`  | Docker image tag (e.g. `v1.0`, `latest`)             |
+| Argument              | Default       | Description                                  |
+|-----------------------|---------------|----------------------------------------------|
+| `--app-name NAME`     | _(required)_  | Application name (k8s-safe: lowercase, hyphens only) |
+| `--dockerfile TYPE`   | `none`        | Sample Dockerfile: `go`, `python`, `node`, `none` |
+| `--repo-url URL`      | _(remote repo)_ | Clone from custom remote instead of default |
+| `--local`             | `false`         | Copy local template directory instead of cloning |
+| `--registry-url URL`  | `localhost`   | Container registry hostname                  |
+| `--registry-port PORT`| `50000`       | Container registry port                      |
+| `--k8s-namespace NS`  | _(app-name)_  | Kubernetes namespace                         |
+| `--container-port PORT`| `8080`       | Container port for K8s manifests             |
+| `--help`              | —             | Show help                                    |
 
-### Optional Arguments
+### `build.sh` — CI/CD Pipeline
 
-| Argument              | Default                    | Description                                 |
-|-----------------------|----------------------------|---------------------------------------------|
-| `--registry-url`      | `$REGISTRY_URL` or `k3d-registry.localhost` | Container registry hostname |
-| `--registry-port`     | `$REGISTRY_PORT` or `5000` | Container registry port      |
-| `--k8s-namespace`     | `$K8S_NAMESPACE` or `default` | Kubernetes namespace      |
-| `--container-port`    | `$CONTAINER_PORT` or `8080` | Container port for K8s manifests |
-| `--app-repo-url`      | _(none)_                   | Git repo URL (for ArgoCD Application manifest) |
-| `--auto-deploy`       | `false`                    | Apply generated manifests to cluster          |
-| `--continue-on-error` | `false`                    | Continue pipeline on step failure             |
-| `--help`              | —                          | Show help message                             |
+| Argument              | Default        | Description                                  |
+|-----------------------|----------------|----------------------------------------------|
+| `--app-name NAME`     | `.env` or _(required)_ | Application name                     |
+| `--image-tag TAG`     | _(required)_   | Docker image tag (e.g. `v1.0`, `latest`)     |
+| `--registry-url URL`  | `.env` or `k3d-registry.localhost` | Container registry hostname |
+| `--registry-port PORT`| `.env` or `5000` | Container registry port                     |
+| `--k8s-namespace NS`  | `.env` or `default` | Kubernetes namespace                     |
+| `--container-port PORT`| `.env` or `8080` | Container port for K8s manifests            |
+| `--app-repo-url URL`  | _(none)_       | Git repo URL (for ArgoCD Application manifest) |
+| `--auto-deploy`       | `false`        | Apply generated manifests to cluster          |
+| `--continue-on-error` | `false`        | Continue pipeline on step failure             |
+| `--help`              | —              | Show help message                             |
 
-### Environment Variables
+### `.env` file
 
-All optional arguments can also be set via environment variables:
-`REGISTRY_URL`, `REGISTRY_PORT`, `K8S_NAMESPACE`, `CONTAINER_PORT`.
+Place in the project root alongside `build.sh`. Loaded automatically
+(script directory first, then current working directory).
+
+```
+APP_NAME=my-api
+REGISTRY_URL=localhost
+REGISTRY_PORT=50000
+K8S_NAMESPACE=my-api
+CONTAINER_PORT=8080
+```
+
+CLI flags always override `.env` values, which override built-in defaults.
 
 ---
 
@@ -236,6 +265,7 @@ bats tests/
 | `tests/errors.bats`    | Error handling and step failure       |
 | `tests/manifests.bats` | K8s manifest generation and validation|
 | `tests/argocd.bats`    | ArgoCD Application manifest validation|
+| `tests/init_env.bats`  | `init.sh` scaffold + `.env` loading   |
 | `tests/integration.bats` | End-to-end pipeline integration     |
 
 ---
@@ -245,6 +275,7 @@ bats tests/
 ```
 .
 ├── build.sh                 # Main CI/CD pipeline script
+├── init.sh                  # Project scaffold script (one-time per app)
 ├── k8s/                     # Kubernetes manifest templates
 │   ├── deploy.tmpl.yaml     # Deployment template
 │   ├── svc.tmpl.yaml        # Service template
@@ -257,8 +288,10 @@ bats tests/
 │   ├── errors.bats
 │   ├── manifests.bats
 │   ├── argocd.bats
+│   ├── init_env.bats
 │   └── integration.bats
 ├── .shellcheckrc            # ShellCheck configuration
+├── .gitignore               # Ignores .env, generated manifests, etc.
 └── README.md                # This file
 ```
 
@@ -268,7 +301,7 @@ bats tests/
 
 | Symptom | Likely cause | Fix |
 |---------|-------------|-----|
-| `--app-name is required` | Missing required argument | Add `--app-name my-app` |
+| `--app-name is required` | Missing from CLI and `.env` | Add `--app-name my-app` or set `APP_NAME=my-app` in `.env` |
 | `k8s-safe` validation error | App name has uppercase/underscore | Use lowercase, hyphens only |
 | `docker: command not found` | Docker not installed | Install Docker Desktop |
 | `Cannot connect to the Docker daemon` | Docker not running | Start Docker Desktop |
@@ -277,3 +310,5 @@ bats tests/
 | `kubectl apply` fails | No cluster or wrong context | Run `kubectl cluster-info` |
 | `envsubst: command not found` | GNU gettext not installed | `brew install gettext` (macOS) or `apt install gettext` (Linux) |
 | `step 'Docker Tag/Push' failed` | Registry auth or connection | Run `docker login`, verify `--registry-url` and `--registry-port` |
+| `init.sh: command not found` | Not in PATH | Run `./init.sh` from the gitops-template directory |
+| `init.sh` clones stale content | Need local changes in template | Use `--local` to copy from your local working tree instead of the remote |
