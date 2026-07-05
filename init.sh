@@ -132,15 +132,15 @@ info "Wrote .env with project defaults"
 case "$DOCKERFILE_TYPE" in
   go)
     cat > Dockerfile <<'DOCKER'
-FROM golang:1.22-alpine AS builder
+FROM golang:1.23-alpine AS builder
 WORKDIR /app
 COPY main.go .
 RUN go build -o server main.go
 
-FROM alpine:3.19
+FROM alpine:3.21
 WORKDIR /app
 COPY --from=builder /app/server .
-EXPOSE ${CONTAINER_PORT}
+EXPOSE 8080
 CMD ["./server"]
 DOCKER
     cat > main.go <<'GO'

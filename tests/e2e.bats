@@ -10,7 +10,7 @@ setup() {
 
   # Create a real Dockerfile for a simple Go HTTP server
   cat > "$TEST_TEMP_DIR/Dockerfile" <<'DOCKERFILE'
-FROM golang:1.22-alpine AS builder
+FROM golang:1.23-alpine AS builder
 WORKDIR /app
 COPY <<-GOAPP main.go
 package main
@@ -35,7 +35,7 @@ func main() {
 GOAPP
 RUN go build -o server main.go
 
-FROM alpine:3.19
+FROM alpine:3.21
 WORKDIR /app
 COPY --from=builder /app/server .
 EXPOSE 8080
