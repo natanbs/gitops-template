@@ -103,8 +103,8 @@ sed -i '' 's/REGISTRY_PORT=.*/REGISTRY_PORT=443/' .env
 
 **Building for a specific namespace:**
 ```bash
-# Edit .env or use --k8s-namespace
-./build.sh --image-tag v1.0 --k8s-namespace production --auto-deploy
+# Edit .env or use --k8s-ns
+./build.sh --image-tag v1.0 --k8s-ns production --auto-deploy
 ```
 
 **Scaffolding without init.sh (copy template manually):**
@@ -179,7 +179,7 @@ cd ../my-app
 | `--local`             | `false`         | Copy local template directory instead of cloning |
 | `--registry-url URL`  | `localhost`   | Container registry hostname                  |
 | `--registry-port PORT`| `50000`       | Container registry port                      |
-| `--k8s-namespace NS`  | _(app-name)_  | Kubernetes namespace                         |
+| `--k8s-ns NS`  | _(app-name)_  | Kubernetes namespace                         |
 | `--container-port PORT`| `8080`       | Container port for K8s manifests             |
 | `--help`              | —             | Show help                                    |
 
@@ -191,7 +191,7 @@ cd ../my-app
 | `--image-tag TAG`     | _(required)_   | Docker image tag (e.g. `v1.0`, `latest`)     |
 | `--registry-url URL`  | `.env` or `k3d-registry.localhost` | Container registry hostname |
 | `--registry-port PORT`| `.env` or `5000` | Container registry port                     |
-| `--k8s-namespace NS`  | `.env` or `default` | Kubernetes namespace                     |
+| `--k8s-ns NS`  | `.env` or `default` | Kubernetes namespace                     |
 | `--container-port PORT`| `.env` or `8080` | Container port for K8s manifests            |
 | `--app-repo-url URL`  | _(none)_       | Git repo URL (for ArgoCD Application manifest) |
 | `--auto-deploy`       | `false`        | Apply generated manifests to cluster          |
@@ -237,7 +237,7 @@ All variables use the `${VARIABLE_NAME}` syntax supported by `envsubst`.
 | `${IMAGE_TAG}`    | `--image-tag`            |
 | `${REGISTRY_URL}` | `--registry-url`         |
 | `${REGISTRY_PORT}`| `--registry-port`        |
-| `${K8S_NAMESPACE}`| `--k8s-namespace`        |
+| `${K8S_NAMESPACE}`| `--k8s-ns`        |
 | `${CONTAINER_PORT}`| `--container-port`      |
 
 ### ArgoCD Application (`argocd/*.tmpl.yaml`)
@@ -246,7 +246,7 @@ All variables use the `${VARIABLE_NAME}` syntax supported by `envsubst`.
 |--------------------|---------------------------|
 | `${APP_NAME}`      | `--app-name`              |
 | `${APP_REPO_URL}`  | `--app-repo-url`          |
-| `${K8S_NAMESPACE}` | `--k8s-namespace`         |
+| `${K8S_NAMESPACE}` | `--k8s-ns`         |
 
 ---
 

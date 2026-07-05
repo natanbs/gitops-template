@@ -29,7 +29,7 @@ Options:
   --local              Copy local template instead of cloning from remote
   --registry-url URL   Container registry hostname (default: localhost)
   --registry-port PORT Container registry port (default: 50000)
-  --k8s-namespace NS   Kubernetes namespace (default: same as --app-name)
+  --k8s-ns NS   Kubernetes namespace (default: apps-ns)
   --container-port PORT App port (default: 8080)
   --help               Show this help message
 
@@ -48,7 +48,7 @@ DOCKERFILE_TYPE="none"
 REPO_URL=""
 REGISTRY_URL="localhost"
 REGISTRY_PORT="50000"
-K8S_NAMESPACE=""
+K8S_NAMESPACE="apps-ns"
 CONTAINER_PORT="8080"
 
 while [ $# -gt 0 ]; do
@@ -65,8 +65,8 @@ while [ $# -gt 0 ]; do
     --registry-url=*)    REGISTRY_URL="${1#*=}"; shift ;;
     --registry-port)     REGISTRY_PORT="$2"; shift 2 ;;
     --registry-port=*)   REGISTRY_PORT="${1#*=}"; shift ;;
-    --k8s-namespace)     K8S_NAMESPACE="$2"; shift 2 ;;
-    --k8s-namespace=*)   K8S_NAMESPACE="${1#*=}"; shift ;;
+    --k8s-ns)     K8S_NAMESPACE="$2"; shift 2 ;;
+    --k8s-ns=*)   K8S_NAMESPACE="${1#*=}"; shift ;;
     --container-port)    CONTAINER_PORT="$2"; shift 2 ;;
     --container-port=*)  CONTAINER_PORT="${1#*=}"; shift ;;
     -h)                  show_help ;;
@@ -86,8 +86,6 @@ if ! echo "$APP_NAME" | grep -qE '^[a-z][a-z0-9-]*$'; then
   error "App name must be k8s-safe: start with a letter, only lowercase alphanumeric and hyphens"
   exit 1
 fi
-
-[ -z "$K8S_NAMESPACE" ] && K8S_NAMESPACE="$APP_NAME"
 
 TARGET_DIR="$(dirname "$PWD")/$APP_NAME"
 
@@ -248,6 +246,14 @@ esac
 
 git add .
 git commit -m "Add project files" >/dev/null 2>&1 || true
+
+# ── Ensure namespace exists ─────────────────────────────────
+if command -v kubectl &>/dev/null && kubectl cluster-info 2>/dev/null >/dev/null; then
+  kubectl create namespace "$K8S_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+  info "Ensured namespace '$K8S_NAMESPACE' exists on cluster"
+else
+  warn "No cluster reachable — skipping namespace creation"
+fi
 
 # ── Summary ──────────────────────────────────────────────────
 echo

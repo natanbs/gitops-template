@@ -70,7 +70,7 @@ Optional:
                         (default: $REGISTRY_URL or k3d-registry.localhost)
   --registry-port PORT  Container registry port
                         (default: $REGISTRY_PORT or 5000)
-  --k8s-namespace NS    Kubernetes namespace (default: default)
+  --k8s-ns NS    Kubernetes namespace (default: default)
   --container-port PORT Container port for K8s manifests (default: 8080)
   --app-repo-url URL    Git repository URL for ArgoCD Application template
   --auto-deploy         Apply generated manifests to the cluster via kubectl
@@ -106,8 +106,8 @@ parse_args() {
       --registry-url=*)    REGISTRY_URL="${1#*=}"; shift ;;
       --registry-port)     REGISTRY_PORT="$2"; shift 2 ;;
       --registry-port=*)   REGISTRY_PORT="${1#*=}"; shift ;;
-      --k8s-namespace)     K8S_NAMESPACE="$2"; shift 2 ;;
-      --k8s-namespace=*)   K8S_NAMESPACE="${1#*=}"; shift ;;
+      --k8s-ns)     K8S_NAMESPACE="$2"; shift 2 ;;
+      --k8s-ns=*)   K8S_NAMESPACE="${1#*=}"; shift ;;
       --container-port)    CONTAINER_PORT="$2"; shift 2 ;;
       --container-port=*)  CONTAINER_PORT="${1#*=}"; shift ;;
       --app-repo-url)      APP_REPO_URL="$2"; shift 2 ;;
@@ -243,13 +243,13 @@ step_deploy() {
     done
   fi
 
-  # Apply ArgoCD manifests (if any)
+  # Apply ArgoCD manifests (use namespace from manifest — typically argocd)
   if [ -d "${PROJECT_ROOT}/argocd" ]; then
     for manifest in "${PROJECT_ROOT}"/argocd/*.yaml; do
       [[ "$manifest" == *.tmpl.yaml ]] && continue
       [ -f "$manifest" ] || continue
       info "  Applying: $(basename "$manifest")"
-      kubectl apply -f "$manifest" --namespace "$K8S_NAMESPACE" || return 1
+      kubectl apply -f "$manifest" || return 1
     done
   fi
 }

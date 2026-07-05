@@ -52,7 +52,7 @@ EOF
     --app-name cli-override \
     --image-tag v1.0 \
     --registry-url actual-registry \
-    --k8s-namespace actual-ns \
+    --k8s-ns actual-ns \
     --continue-on-error
   [ "$status" -eq 1 ]
   [[ "$output" == *"cli-override"* ]]
@@ -91,15 +91,21 @@ EOF
 }
 
 @test "init.sh writes .env with custom namespace" {
-  run "$PROJECT_ROOT/init.sh" --app-name ns-app --k8s-namespace my-ns
+  run "$PROJECT_ROOT/init.sh" --app-name ns-app --k8s-ns my-ns
   [ "$status" -eq 0 ]
   assert_file_contains "$TEST_TEMP_DIR/ns-app/.env" "K8S_NAMESPACE=my-ns"
 }
 
-@test "init.sh k8s-namespace defaults to app name" {
+@test "init.sh k8s-namespace defaults to apps-ns" {
   run "$PROJECT_ROOT/init.sh" --app-name default-ns-app
   [ "$status" -eq 0 ]
-  assert_file_contains "$TEST_TEMP_DIR/default-ns-app/.env" "K8S_NAMESPACE=default-ns-app"
+  assert_file_contains "$TEST_TEMP_DIR/default-ns-app/.env" "K8S_NAMESPACE=apps-ns"
+}
+
+@test "init.sh --k8s-ns overrides the default" {
+  run "$PROJECT_ROOT/init.sh" --app-name custom-ns-app --k8s-ns my-ns
+  [ "$status" -eq 0 ]
+  assert_file_contains "$TEST_TEMP_DIR/custom-ns-app/.env" "K8S_NAMESPACE=my-ns"
 }
 
 @test "init.sh --app-name with hyphen name succeeds" {

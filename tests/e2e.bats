@@ -143,7 +143,7 @@ yaml.safe_load(open('$TEST_TEMP_DIR/argocd/application.yaml'))
   run "$PROJECT_ROOT/build.sh" \
     --app-name e2e-test-app --image-tag v1.0 \
     --registry-url localhost --registry-port 5000 \
-    --k8s-namespace e2e-ns --container-port 8080 \
+    --k8s-ns e2e-ns --container-port 8080 \
     --app-repo-url https://github.com/org/e2e-test-app.git \
     --continue-on-error
 

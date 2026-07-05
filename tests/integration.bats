@@ -27,7 +27,7 @@ teardown() {
     --app-name test-app --image-tag v1.0 \
     --registry-url k3d-registry.localhost --registry-port 5000 \
     --container-port 8080 \
-    --k8s-namespace default \
+    --k8s-ns default \
     --continue-on-error
 
   # Template output goes to PROJECT_ROOT/k8s/ (the real template directory)
