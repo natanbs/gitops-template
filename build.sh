@@ -30,6 +30,7 @@ DEFAULT_REGISTRY_URL="${REGISTRY_URL:-k3d-registry.localhost}"
 DEFAULT_REGISTRY_PORT="${REGISTRY_PORT:-5000}"
 DEFAULT_K8S_NAMESPACE="${K8S_NAMESPACE:-default}"
 DEFAULT_CONTAINER_PORT="${CONTAINER_PORT:-8080}"
+DEFAULT_GIT_REPO_BASE="${GIT_REPO_BASE:-https://github.com/natanbs}"
 
 # ── State (preserves .env values, overridable by CLI) ──────────────
 APP_NAME="${APP_NAME:-}"
@@ -38,6 +39,7 @@ REGISTRY_URL="${REGISTRY_URL:-$DEFAULT_REGISTRY_URL}"
 REGISTRY_PORT="${REGISTRY_PORT:-$DEFAULT_REGISTRY_PORT}"
 K8S_NAMESPACE="${K8S_NAMESPACE:-$DEFAULT_K8S_NAMESPACE}"
 CONTAINER_PORT="${CONTAINER_PORT:-$DEFAULT_CONTAINER_PORT}"
+GIT_REPO_BASE="${GIT_REPO_BASE:-$DEFAULT_GIT_REPO_BASE}"
 APP_REPO_URL=""
 AUTO_DEPLOY=false
 CONTINUE_ON_ERROR=false
@@ -73,12 +75,13 @@ Optional:
   --k8s-ns NS    Kubernetes namespace (default: default)
   --container-port PORT Container port for K8s manifests (default: 8080)
   --app-repo-url URL    Git repository URL for ArgoCD Application template
+                        (default: \$GIT_REPO_BASE/\$APP_NAME.git)
   --auto-deploy         Apply generated manifests to the cluster via kubectl
   --continue-on-error   Continue pipeline even if a step fails
   --help                Show this help message and exit
 
 Environment variables:
-  REGISTRY_URL, REGISTRY_PORT, K8S_NAMESPACE, CONTAINER_PORT
+  REGISTRY_URL, REGISTRY_PORT, K8S_NAMESPACE, CONTAINER_PORT, GIT_REPO_BASE
   can be set instead of passing the corresponding flags.
 
 Dotenv file:
@@ -219,8 +222,8 @@ step_template() {
     done
   fi
 
-  # Process all .tmpl.yaml files in argocd/ directory
-  if [ -d "${PROJECT_ROOT}/argocd" ]; then
+  # Process all .tmpl.yaml files in argocd/ directory (only if repo URL is set)
+  if [ -d "${PROJECT_ROOT}/argocd" ] && [ -n "$APP_REPO_URL" ]; then
     for tmpl in "${PROJECT_ROOT}"/argocd/*.tmpl.yaml; do
       [ -f "$tmpl" ] || continue
       local output="${tmpl%.tmpl.yaml}.yaml"
@@ -243,8 +246,8 @@ step_deploy() {
     done
   fi
 
-  # Apply ArgoCD manifests (use namespace from manifest — typically argocd)
-  if [ -d "${PROJECT_ROOT}/argocd" ]; then
+  # Apply ArgoCD manifests (only if --app-repo-url was provided)
+  if [ -n "$APP_REPO_URL" ] && [ -d "${PROJECT_ROOT}/argocd" ]; then
     for manifest in "${PROJECT_ROOT}"/argocd/*.yaml; do
       [[ "$manifest" == *.tmpl.yaml ]] && continue
       [ -f "$manifest" ] || continue
@@ -257,6 +260,12 @@ step_deploy() {
 # ── Main ───────────────────────────────────────────────────────────
 main() {
   parse_args "$@"
+
+  # Derive repo URL from convention if not explicitly set
+  if [ -z "$APP_REPO_URL" ] && [ -n "$APP_NAME" ]; then
+    APP_REPO_URL="${GIT_REPO_BASE}/${APP_NAME}.git"
+  fi
+
   validate_inputs
 
   info "Application: $APP_NAME"
