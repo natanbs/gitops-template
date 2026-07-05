@@ -15,6 +15,8 @@ setup() {
   export IMAGE_TAG="v1.0"
   export REGISTRY_URL="k3d-registry.localhost"
   export REGISTRY_PORT="5000"
+  export REGISTRY_CLUSTER_URL="k3d-registry.localhost"
+  export REGISTRY_CLUSTER_PORT="5000"
   export K8S_NAMESPACE="default"
   export CONTAINER_PORT="8080"
 }

@@ -65,6 +65,8 @@ teardown() {
   export IMAGE_TAG="v1.0"
   export REGISTRY_URL="localhost"
   export REGISTRY_PORT="5000"
+  export REGISTRY_CLUSTER_URL="localhost"
+  export REGISTRY_CLUSTER_PORT="5000"
   export K8S_NAMESPACE="e2e-ns"
   export CONTAINER_PORT="8080"
 
@@ -140,7 +142,8 @@ yaml.safe_load(open('$TEST_TEMP_DIR/argocd/application.yaml'))
   # Clean previous generated output
   rm -f "$PROJECT_ROOT/k8s/deploy.yaml" "$PROJECT_ROOT/k8s/svc.yaml" "$PROJECT_ROOT/k8s/ingress.yaml" "$PROJECT_ROOT/argocd/application.yaml"
 
-  run "$PROJECT_ROOT/build.sh" \
+  run env REGISTRY_CLUSTER_URL=localhost REGISTRY_CLUSTER_PORT=5000 \
+    "$PROJECT_ROOT/build.sh" \
     --app-name e2e-test-app --image-tag v1.0 \
     --registry-url localhost --registry-port 5000 \
     --k8s-ns e2e-ns --container-port 8080 \

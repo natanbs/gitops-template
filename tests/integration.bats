@@ -33,7 +33,7 @@ teardown() {
   # Template output goes to PROJECT_ROOT/k8s/ (the real template directory)
   [ -f "$PROJECT_ROOT/k8s/deploy.yaml" ]
   assert_file_contains "$PROJECT_ROOT/k8s/deploy.yaml" "name: test-app"
-  assert_file_contains "$PROJECT_ROOT/k8s/deploy.yaml" "k3d-registry.localhost:5000/test-app:v1.0"
+  assert_file_contains "$PROJECT_ROOT/k8s/deploy.yaml" "k3d-reg:5000/test-app:v1.0"
   assert_file_contains "$PROJECT_ROOT/k8s/deploy.yaml" "containerPort: 8080"
   assert_file_contains "$PROJECT_ROOT/k8s/deploy.yaml" "namespace: default"
 }

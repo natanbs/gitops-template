@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: ${APP_NAME}
-        image: ${REGISTRY_URL}:${REGISTRY_PORT}/${APP_NAME}:${IMAGE_TAG}
+        image: ${REGISTRY_CLUSTER_URL}:${REGISTRY_CLUSTER_PORT}/${APP_NAME}:${IMAGE_TAG}
         ports:
         - containerPort: ${CONTAINER_PORT}
         resources:
