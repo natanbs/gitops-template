@@ -109,6 +109,8 @@ _REGISTRY_URL="$DEF_REGISTRY_URL"
 _REGISTRY_PORT="$DEF_REGISTRY_PORT"
 _K8S_NS="$DEF_K8S_NAMESPACE"
 _CONTAINER_PORT="$DEF_CONTAINER_PORT"
+_PVC_NAME=""
+_PVC_MOUNT_PATH=""
 
 if [ -f .env ]; then
   _APP_NAME="$(       grep -s '^APP_NAME='       .env | sed 's/^APP_NAME=//'       || echo "$APP_NAME")"
@@ -116,13 +118,16 @@ if [ -f .env ]; then
   _REGISTRY_PORT="$(  grep -s '^REGISTRY_PORT='  .env | sed 's/^REGISTRY_PORT=//'  || echo "$DEF_REGISTRY_PORT")"
   _K8S_NS="$(         grep -s '^K8S_NAMESPACE='  .env | sed 's/^K8S_NAMESPACE=//'  || echo "$DEF_K8S_NAMESPACE")"
   _CONTAINER_PORT="$( grep -s '^CONTAINER_PORT=' .env | sed 's/^CONTAINER_PORT=//' || echo "$DEF_CONTAINER_PORT")"
+  _PVC_NAME="$(       grep -s '^PVC_NAME='       .env | sed 's/^PVC_NAME=//'       || true)"
+  _PVC_MOUNT_PATH="$( grep -s '^PVC_MOUNT_PATH=' .env | sed 's/^PVC_MOUNT_PATH=//' || true)"
 fi
 
 # CLI overrides take precedence
-[ -n "$CLI_REGISTRY_URL" ]    && _REGISTRY_URL="$CLI_REGISTRY_URL"
-[ -n "$CLI_REGISTRY_PORT" ]   && _REGISTRY_PORT="$CLI_REGISTRY_PORT"
-[ -n "$CLI_K8S_NAMESPACE" ]   && _K8S_NS="$CLI_K8S_NAMESPACE"
-[ -n "$CLI_CONTAINER_PORT" ]  && _CONTAINER_PORT="$CLI_CONTAINER_PORT"
+[ -n "$CLI_APP_NAME" ]          && _APP_NAME="$CLI_APP_NAME"
+[ -n "$CLI_REGISTRY_URL" ]      && _REGISTRY_URL="$CLI_REGISTRY_URL"
+[ -n "$CLI_REGISTRY_PORT" ]     && _REGISTRY_PORT="$CLI_REGISTRY_PORT"
+[ -n "$CLI_K8S_NAMESPACE" ]     && _K8S_NS="$CLI_K8S_NAMESPACE"
+[ -n "$CLI_CONTAINER_PORT" ]    && _CONTAINER_PORT="$CLI_CONTAINER_PORT"
 
 # Export merged values for build.sh / kubectl
 APP_NAME="$_APP_NAME"
@@ -142,6 +147,13 @@ REGISTRY_CLUSTER_PORT=5000
 K8S_NAMESPACE=$_K8S_NS
 CONTAINER_PORT=$_CONTAINER_PORT
 EOF
+
+# Preserve PVC settings if present (no CLI flags for these)
+if [ -n "$_PVC_NAME" ]; then
+  echo "PVC_NAME=$_PVC_NAME" >> .env
+  echo "PVC_MOUNT_PATH=${_PVC_MOUNT_PATH:-/data}" >> .env
+fi
+
 info "Wrote .env"
 
 # ── Write .gitignore ────────────────────────────────────────

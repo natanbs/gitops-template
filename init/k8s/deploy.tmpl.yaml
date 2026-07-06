@@ -20,6 +20,7 @@ spec:
         image: ${REGISTRY_CLUSTER_URL}:${REGISTRY_CLUSTER_PORT}/${APP_NAME}:${IMAGE_TAG}
         ports:
         - containerPort: ${CONTAINER_PORT}
+${VOLUME_MOUNTS}
         resources:
           requests:
             memory: "64Mi"
@@ -39,3 +40,4 @@ spec:
             port: ${CONTAINER_PORT}
           initialDelaySeconds: 3
           periodSeconds: 5
+${VOLUMES}

@@ -227,9 +227,26 @@ step_tag_push() {
 step_template() {
   step "4. Processing Kubernetes Templates"
 
-  export APP_NAME IMAGE_TAG REGISTRY_URL REGISTRY_PORT REGISTRY_CLUSTER_URL REGISTRY_CLUSTER_PORT K8S_NAMESPACE CONTAINER_PORT APP_REPO_URL
+  # Set PVC placeholders (empty by default, filled from .env)
+  PVC_NAME="${PVC_NAME:-}"
+  PVC_MOUNT_PATH="${PVC_MOUNT_PATH:-/data}"
+  VOLUME_MOUNTS=""
+  VOLUMES=""
+  if [ -n "$PVC_NAME" ]; then
+    VOLUME_MOUNTS="        volumeMounts:
+        - name: ${PVC_NAME}
+          mountPath: ${PVC_MOUNT_PATH}"
+    VOLUMES="      volumes:
+      - name: ${PVC_NAME}
+        persistentVolumeClaim:
+          claimName: ${PVC_NAME}"
+  fi
+  export APP_NAME IMAGE_TAG REGISTRY_URL REGISTRY_PORT REGISTRY_CLUSTER_URL REGISTRY_CLUSTER_PORT K8S_NAMESPACE CONTAINER_PORT APP_REPO_URL PVC_NAME PVC_MOUNT_PATH VOLUME_MOUNTS VOLUMES
 
-  mkdir -p "${PROJECT_ROOT}/k8s"
+  # Derive app directory: apps are siblings of the template repo
+  local app_dir
+  app_dir="$(dirname "$PROJECT_ROOT")/$APP_NAME"
+  mkdir -p "$app_dir/k8s" "$app_dir/argocd"
 
   # Resolve K8s templates: local init/k8s/ dir or download from template repo
   local tmpl_src="${PROJECT_ROOT}/init/k8s"
@@ -246,8 +263,8 @@ step_template() {
   for tmpl in "${tmpl_src}"/*.tmpl.yaml; do
     [ -f "$tmpl" ] || continue
     local filename; filename=$(basename "$tmpl" .tmpl.yaml)
-    local output="${PROJECT_ROOT}/k8s/${filename}.yaml"
-    info "  Template: $(basename "$tmpl") -> k8s/${filename}.yaml"
+    local output="${app_dir}/k8s/${filename}.yaml"
+    info "  Template: $(basename "$tmpl") -> ${app_dir}/k8s/${filename}.yaml"
     envsubst < "$tmpl" > "$output" || return 1
   done
 
@@ -266,12 +283,11 @@ step_template() {
         -o "${argocd_src}/application.tmpl.yaml" 2>/dev/null || true
     fi
 
-    mkdir -p "${PROJECT_ROOT}/argocd"
     for tmpl in "${argocd_src}"/*.tmpl.yaml; do
       [ -f "$tmpl" ] || continue
       local filename; filename=$(basename "$tmpl" .tmpl.yaml)
-      local output="${PROJECT_ROOT}/argocd/${filename}.yaml"
-      info "  ArgoCD Template: $(basename "$tmpl") -> argocd/${filename}.yaml"
+      local output="${app_dir}/argocd/${filename}.yaml"
+      info "  ArgoCD Template: $(basename "$tmpl") -> ${app_dir}/argocd/${filename}.yaml"
       envsubst < "$tmpl" > "$output" || return 1
     done
 
@@ -284,19 +300,29 @@ step_template() {
 step_deploy() {
   step "5. Applying Manifests to Cluster"
 
-  # Apply K8s manifests
-  if [ -d "${PROJECT_ROOT}/k8s" ]; then
-    for manifest in "${PROJECT_ROOT}"/k8s/*.yaml; do
+  local app_dir
+  app_dir="$(dirname "$PROJECT_ROOT")/$APP_NAME"
+
+  # Apply K8s manifests from the app's k8s/ directory
+  if [ -d "$app_dir/k8s" ]; then
+    for manifest in "$app_dir"/k8s/*.yaml; do
       [[ "$manifest" == *.tmpl.yaml ]] && continue
       [ -f "$manifest" ] || continue
       info "  Applying: $(basename "$manifest")"
-      kubectl apply -f "$manifest" --namespace "$K8S_NAMESPACE" || return 1
+      local kind
+      kind=$(grep -E '^kind:' "$manifest" | head -1 | sed 's/^kind: *//')
+      if [ "$kind" = "Service" ]; then
+        kubectl delete -f "$manifest" --namespace "$K8S_NAMESPACE" --ignore-not-found 2>/dev/null
+        kubectl apply -f "$manifest" --namespace "$K8S_NAMESPACE" || return 1
+      else
+        kubectl apply -f "$manifest" --namespace "$K8S_NAMESPACE" || return 1
+      fi
     done
   fi
 
-  # Apply ArgoCD manifests (only if --app-repo-url was provided)
-  if [ -n "$APP_REPO_URL" ] && [ -d "${PROJECT_ROOT}/argocd" ]; then
-    for manifest in "${PROJECT_ROOT}"/argocd/*.yaml; do
+  # Apply ArgoCD manifests from the app's argocd/ directory
+  if [ -n "$APP_REPO_URL" ] && [ -d "$app_dir/argocd" ]; then
+    for manifest in "$app_dir"/argocd/*.yaml; do
       [[ "$manifest" == *.tmpl.yaml ]] && continue
       [ -f "$manifest" ] || continue
       info "  Applying: $(basename "$manifest")"
