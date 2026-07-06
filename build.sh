@@ -25,6 +25,11 @@ if [ -n "$_ENV_SOURCE" ]; then
   set +a
 fi
 
+# If APP_NAME is still empty, infer it from the current directory name (useful when .env is missing)
+if [ -z "$APP_NAME" ]; then
+  APP_NAME=$(basename "$(pwd)")
+fi
+
 # ── Defaults ───────────────────────────────────────────────────────
 DEFAULT_REGISTRY_URL="${REGISTRY_URL:-k3d-registry.localhost}"
 DEFAULT_REGISTRY_PORT="${REGISTRY_PORT:-5000}"
@@ -32,6 +37,7 @@ DEFAULT_REGISTRY_CLUSTER_URL="${REGISTRY_CLUSTER_URL:-k3d-reg}"
 DEFAULT_REGISTRY_CLUSTER_PORT="${REGISTRY_CLUSTER_PORT:-5000}"
 DEFAULT_K8S_NAMESPACE="${K8S_NAMESPACE:-default}"
 DEFAULT_CONTAINER_PORT="${CONTAINER_PORT:-8080}"
+DEFAULT_TEMPLATE_REPO_RAW="https://raw.githubusercontent.com/natanbs/gitops-template/main"
 DEFAULT_GIT_REPO_BASE="${GIT_REPO_BASE:-https://github.com/natanbs}"
 
 # ── State (preserves .env values, overridable by CLI) ──────────────
@@ -43,6 +49,7 @@ REGISTRY_CLUSTER_URL="${REGISTRY_CLUSTER_URL:-$DEFAULT_REGISTRY_CLUSTER_URL}"
 REGISTRY_CLUSTER_PORT="${REGISTRY_CLUSTER_PORT:-$DEFAULT_REGISTRY_CLUSTER_PORT}"
 K8S_NAMESPACE="${K8S_NAMESPACE:-$DEFAULT_K8S_NAMESPACE}"
 CONTAINER_PORT="${CONTAINER_PORT:-$DEFAULT_CONTAINER_PORT}"
+TEMPLATE_REPO_RAW="${TEMPLATE_REPO_RAW:-$DEFAULT_TEMPLATE_REPO_RAW}"
 GIT_REPO_BASE="${GIT_REPO_BASE:-$DEFAULT_GIT_REPO_BASE}"
 APP_REPO_URL=""
 AUTO_DEPLOY=false
@@ -68,7 +75,7 @@ Build, tag, and push a Docker image for any application. Optionally process
 Kubernetes manifest templates and deploy to a cluster.
 
 Required:
-  --app-name NAME       Application name (k8s-safe: lowercase, hyphens only)
+   --app-name NAME       Application name (k8s-safe: lowercase, alphanumeric only). Optional if .env sets APP_NAME or when run from the service directory (its name is used).
   --image-tag TAG       Docker image tag (e.g. v1.0, latest)
 
 Optional:
@@ -78,6 +85,9 @@ Optional:
                         (default: $REGISTRY_PORT or 5000)
   --k8s-ns NS    Kubernetes namespace (default: default)
   --container-port PORT Container port for K8s manifests (default: 8080)
+  --template-repo-raw URL
+                        Base URL for fetching K8s templates at build time
+                        (default: $DEFAULT_TEMPLATE_REPO_RAW)
   --app-repo-url URL    Git repository URL for ArgoCD Application template
                         (default: \$GIT_REPO_BASE/\$APP_NAME.git)
   --auto-deploy         Apply generated manifests to the cluster via kubectl
@@ -118,6 +128,8 @@ parse_args() {
       --k8s-ns=*)   K8S_NAMESPACE="${1#*=}"; shift ;;
       --container-port)    CONTAINER_PORT="$2"; shift 2 ;;
       --container-port=*)  CONTAINER_PORT="${1#*=}"; shift ;;
+      --template-repo-raw) TEMPLATE_REPO_RAW="$2"; shift 2 ;;
+      --template-repo-raw=*) TEMPLATE_REPO_RAW="${1#*=}"; shift ;;
       --app-repo-url)      APP_REPO_URL="$2"; shift 2 ;;
       --app-repo-url=*)    APP_REPO_URL="${1#*=}"; shift ;;
       --auto-deploy)       AUTO_DEPLOY=true; shift ;;
@@ -217,26 +229,56 @@ step_template() {
 
   export APP_NAME IMAGE_TAG REGISTRY_URL REGISTRY_PORT REGISTRY_CLUSTER_URL REGISTRY_CLUSTER_PORT K8S_NAMESPACE CONTAINER_PORT APP_REPO_URL
 
-  # Process all .tmpl.yaml files from templates/ into k8s/
-  if [ -d "${PROJECT_ROOT}/init-templates" ]; then
-    mkdir -p "${PROJECT_ROOT}/k8s"
-    for tmpl in "${PROJECT_ROOT}"/init-templates/*.tmpl.yaml; do
-      [ -f "$tmpl" ] || continue
-      local filename; filename=$(basename "$tmpl" .tmpl.yaml)
-      local output="${PROJECT_ROOT}/k8s/${filename}.yaml"
-      info "  Template: $(basename "$tmpl") -> k8s/${filename}.yaml"
-      envsubst < "$tmpl" > "$output" || return 1
+  mkdir -p "${PROJECT_ROOT}/k8s"
+
+  # Resolve init-templates source: local dir or download from template repo
+  local tmpl_src="${PROJECT_ROOT}/init-templates"
+  local tmpl_cleanup=false
+  if [ ! -d "$tmpl_src" ]; then
+    tmpl_src="$(mktemp -d)"
+    tmpl_cleanup=true
+    for t in deploy svc ingress; do
+      curl -sLf "${TEMPLATE_REPO_RAW}/init-templates/${t}.tmpl.yaml" \
+        -o "${tmpl_src}/${t}.tmpl.yaml" 2>/dev/null || true
     done
   fi
 
-  # Process all .tmpl.yaml files in argocd/ directory (only if repo URL is set)
-  if [ -d "${PROJECT_ROOT}/argocd" ] && [ -n "$APP_REPO_URL" ]; then
-    for tmpl in "${PROJECT_ROOT}"/argocd/*.tmpl.yaml; do
+  for tmpl in "${tmpl_src}"/*.tmpl.yaml; do
+    [ -f "$tmpl" ] || continue
+    local filename; filename=$(basename "$tmpl" .tmpl.yaml)
+    local output="${PROJECT_ROOT}/k8s/${filename}.yaml"
+    info "  Template: $(basename "$tmpl") -> k8s/${filename}.yaml"
+    envsubst < "$tmpl" > "$output" || return 1
+  done
+
+  if [ "$tmpl_cleanup" = true ]; then
+    rm -rf "$tmpl_src"
+  fi
+
+  # Process ArgoCD templates (only if repo URL is set)
+  if [ -n "$APP_REPO_URL" ]; then
+    local argocd_src="${PROJECT_ROOT}/argocd"
+    local argocd_cleanup=false
+    if [ ! -d "$argocd_src" ]; then
+      mkdir -p "$argocd_src"
+      argocd_src="$(mktemp -d)"
+      argocd_cleanup=true
+      curl -sLf "${TEMPLATE_REPO_RAW}/argocd/application.tmpl.yaml" \
+        -o "${argocd_src}/application.tmpl.yaml" 2>/dev/null || true
+    fi
+
+    mkdir -p "${PROJECT_ROOT}/argocd"
+    for tmpl in "${argocd_src}"/*.tmpl.yaml; do
       [ -f "$tmpl" ] || continue
-      local output="${tmpl%.tmpl.yaml}.yaml"
-      info "  Template: $(basename "$tmpl") -> $(basename "$output")"
+      local filename; filename=$(basename "$tmpl" .tmpl.yaml)
+      local output="${PROJECT_ROOT}/argocd/${filename}.yaml"
+      info "  ArgoCD Template: $(basename "$tmpl") -> argocd/${filename}.yaml"
       envsubst < "$tmpl" > "$output" || return 1
     done
+
+    if [ "$argocd_cleanup" = true ]; then
+      rm -rf "$argocd_src"
+    fi
   fi
 }
 

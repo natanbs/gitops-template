@@ -126,18 +126,16 @@ EOF
   [[ "$output" == *"--app-name is required"* ]]
 }
 
-@test "init.sh copies build.sh into scaffolded project" {
-  run "$PROJECT_ROOT/init.sh" --app-name has-build
+@test "init.sh does not copy build.sh into scaffolded project" {
+  run "$PROJECT_ROOT/init.sh" --app-name no-build
   [ "$status" -eq 0 ]
-  [ -f "$TEST_TEMP_DIR/has-build/build.sh" ]
-  [ -x "$TEST_TEMP_DIR/has-build/build.sh" ]
+  [ ! -f "$TEST_TEMP_DIR/no-build/build.sh" ]
 }
 
-@test "init.sh copies k8s templates into scaffolded project" {
-  run "$PROJECT_ROOT/init.sh" --app-name has-k8s --local
+@test "init.sh does not copy k8s templates into scaffolded project" {
+  run "$PROJECT_ROOT/init.sh" --app-name no-templates
   [ "$status" -eq 0 ]
-  [ -f "$TEST_TEMP_DIR/has-k8s/templates/deploy.tmpl.yaml" ]
-  [ -f "$TEST_TEMP_DIR/has-k8s/templates/svc.tmpl.yaml" ]
+  [ ! -d "$TEST_TEMP_DIR/no-templates/init-templates" ]
 }
 
 @test "init.sh does not copy argocd templates (optional, not required)" {
@@ -201,12 +199,12 @@ EOF
 }
 
 @test "scaffolded project uses .env with build.sh end-to-end" {
-  # --local to test against the working tree (not the remote repo)
-  run "$PROJECT_ROOT/init.sh" --app-name full-test --dockerfile go --local
+  run "$PROJECT_ROOT/init.sh" --app-name full-test --dockerfile go
   [ "$status" -eq 0 ]
 
-  # build.sh reads APP_NAME and registry from .env, no --app-name needed
-  run "$TEST_TEMP_DIR/full-test/build.sh" --image-tag v1.0 --continue-on-error
+  # build.sh loads .env from CWD when PROJECT_ROOT has none
+  cd "$TEST_TEMP_DIR/full-test"
+  run "$PROJECT_ROOT/build.sh" --image-tag v1.0 --continue-on-error
   [[ "$output" == *"Application: full-test"* ]]
   [[ "$output" == *"Registry:    localhost:50000"* ]]
 }

@@ -45,29 +45,31 @@ This sets up:
 ### Step 2: Scaffold your app project
 
 ```bash
-# One command: copies template, inits git, writes .env, scaffolds Dockerfile
+# One command: creates app directory, writes .env, scaffolds Dockerfile
 ./init.sh --app-name my-api --dockerfile go
 
 cd my-api
 ```
 
 This creates `my-api/` with:
-- `build.sh` — the pipeline script
 - `.env` — project config (no need to repeat `--registry-url` etc.)
-- `Dockerfile` — sample Go Dockerfile
-- `k8s/` — K8s manifest templates
-- `argocd/` — ArgoCD Application template
+- `.gitignore` — ignores generated K8s manifests
+- `Dockerfile` — sample Go Dockerfile (if requested)
 - Fresh git history
 
 ### Step 3: Build, push, and deploy
 
 ```bash
-# First build (--app-name and registry come from .env)
-./build.sh --image-tag v1.0
+# Build and push (fetch build.sh from the template repo)
+curl -sL https://github.com/natanbs/gitops-template/raw/main/build.sh \
+  | bash -s -- --app-name my-api --image-tag v1.0
 
 # Build + deploy to Kubernetes
-./build.sh --image-tag v1.0 --auto-deploy
+curl -sL https://github.com/natanbs/gitops-template/raw/main/build.sh \
+  | bash -s -- --app-name my-api --image-tag v1.0 --auto-deploy
 ```
+
+**Note:** `--app-name` can be omitted when running from the app directory (the script infers the name from the current directory) or when `.env` sets `APP_NAME`.
 
 ### Step 4: Full GitOps pipeline
 
@@ -76,9 +78,10 @@ This creates `my-api/` with:
 git remote add origin https://github.com/your-org/my-api.git
 git push -u origin main
 
-./build.sh --image-tag v1.0 \
-  --app-repo-url https://github.com/your-org/my-api.git \
-  --auto-deploy
+curl -sL https://github.com/natanbs/gitops-template/raw/main/build.sh \
+  | bash -s -- --app-name my-api --image-tag v1.0 \
+    --app-repo-url https://github.com/your-org/my-api.git \
+    --auto-deploy
 
 git add argocd/application.yaml
 git commit -m "Add ArgoCD Application manifest"
@@ -98,36 +101,23 @@ sed -i '' 's/REGISTRY_URL=.*/REGISTRY_URL=docker.io/' .env
 sed -i '' 's/REGISTRY_PORT=.*/REGISTRY_PORT=443/' .env
 
 # Or override on the CLI (takes precedence)
-./build.sh --image-tag v1.0 --registry-url docker.io --registry-port 443
+curl -sL https://github.com/natanbs/gitops-template/raw/main/build.sh \
+  | bash -s -- --app-name my-api --image-tag v1.0 \
+    --registry-url docker.io --registry-port 443
 ```
 
 **Building for a specific namespace:**
 ```bash
 # Edit .env or use --k8s-ns
-./build.sh --image-tag v1.0 --k8s-ns production --auto-deploy
-```
-
-**Scaffolding without init.sh (copy template manually):**
-```bash
-git clone https://github.com/natanbs/gitops-template.git my-app
-cd my-app
-rm -rf .git
-git init
-git add .
-git commit -m "Initial scaffold from gitops-template"
-# Write your own .env:
-cat > .env <<'EOF'
-APP_NAME=my-app
-REGISTRY_URL=localhost
-REGISTRY_PORT=50000
-K8S_NAMESPACE=my-app
-CONTAINER_PORT=8080
-EOF
+curl -sL https://github.com/natanbs/gitops-template/raw/main/build.sh \
+  | bash -s -- --app-name my-api --image-tag v1.0 \
+    --k8s-ns production --auto-deploy
 ```
 
 **Recovering from a partial failure:**
 ```bash
-./build.sh --image-tag v1.0 --continue-on-error
+curl -sL https://github.com/natanbs/gitops-template/raw/main/build.sh \
+  | bash -s -- --app-name my-api --image-tag v1.0 --continue-on-error
 ```
 
 ---
@@ -161,8 +151,10 @@ kubectl cluster-info
 cd ../my-app
 
 # 2. Build + deploy in two commands
-./build.sh --image-tag v1.0
-./build.sh --image-tag v1.0 --auto-deploy
+curl -sL https://github.com/natanbs/gitops-template/raw/main/build.sh \
+  | bash -s -- --app-name my-app --image-tag v1.0
+curl -sL https://github.com/natanbs/gitops-template/raw/main/build.sh \
+  | bash -s -- --app-name my-app --image-tag v1.0 --auto-deploy
 ```
 
 ---
@@ -175,43 +167,47 @@ cd ../my-app
 |-----------------------|---------------|----------------------------------------------|
 | `--app-name NAME`     | _(required)_  | Application name (k8s-safe: lowercase, hyphens only) |
 | `--dockerfile TYPE`   | `none`        | Sample Dockerfile: `go`, `python`, `node`, `none` |
-| `--repo-url URL`      | _(remote repo)_ | Clone from custom remote instead of default |
-| `--local`             | `false`         | Copy local template directory instead of cloning |
 | `--registry-url URL`  | `localhost`   | Container registry hostname                  |
 | `--registry-port PORT`| `50000`       | Container registry port                      |
-| `--k8s-ns NS`  | _(app-name)_  | Kubernetes namespace                         |
+| `--k8s-ns NS`         | `apps-ns`     | Kubernetes namespace                         |
 | `--container-port PORT`| `8080`       | Container port for K8s manifests             |
+| `--build`             | `false`       | Run build.sh after scaffolding (build + push) |
+| `--deploy`            | `false`       | Run build.sh --auto-deploy after scaffolding |
+| `--image-tag TAG`     | `v1.0`        | Docker image tag for --build/--deploy        |
 | `--help`              | —             | Show help                                    |
 
 ### `build.sh` — CI/CD Pipeline
 
 | Argument              | Default        | Description                                  |
 |-----------------------|----------------|----------------------------------------------|
-| `--app-name NAME`     | `.env` or _(required)_ | Application name                     |
+| `--app-name NAME`     | `.env` or CWD  | Application name (optional if set in `.env` or running from app dir) |
 | `--image-tag TAG`     | _(required)_   | Docker image tag (e.g. `v1.0`, `latest`)     |
 | `--registry-url URL`  | `.env` or `k3d-registry.localhost` | Container registry hostname |
 | `--registry-port PORT`| `.env` or `5000` | Container registry port                     |
-| `--k8s-ns NS`  | `.env` or `default` | Kubernetes namespace                     |
+| `--k8s-ns NS`         | `.env` or `default` | Kubernetes namespace                     |
 | `--container-port PORT`| `.env` or `8080` | Container port for K8s manifests            |
 | `--app-repo-url URL`  | _(none)_       | Git repo URL (for ArgoCD Application manifest) |
 | `--auto-deploy`       | `false`        | Apply generated manifests to cluster          |
 | `--continue-on-error` | `false`        | Continue pipeline on step failure             |
+| `--template-repo-raw URL` | _(template repo)_ | Base URL for fetching K8s templates at build time |
 | `--help`              | —              | Show help message                             |
 
 ### `.env` file
 
-Place in the project root alongside `build.sh`. Loaded automatically
-(script directory first, then current working directory).
+Place `.env` in the project root. Loaded automatically by `build.sh`.
 
 ```
 APP_NAME=my-api
+GIT_REPO_BASE=https://github.com/your-org
 REGISTRY_URL=localhost
 REGISTRY_PORT=50000
+REGISTRY_CLUSTER_URL=k3d-reg
+REGISTRY_CLUSTER_PORT=5000
 K8S_NAMESPACE=my-api
 CONTAINER_PORT=8080
 ```
 
-CLI flags always override `.env` values, which override built-in defaults.
+`build.sh` loads `.env` from the current working directory (or from the script directory if running via curl). CLI flags always override `.env` values, which override built-in defaults.
 
 ---
 
@@ -273,26 +269,27 @@ bats cicd-tests/
 ## Project Structure
 
 ```
-.
-├── build.sh                 # Main CI/CD pipeline script
+gitops-template/
+├── build.sh                 # Main CI/CD pipeline script (fetched via curl at build time)
 ├── init.sh                  # Project scaffold script (one-time per app)
-├── k8s/                     # Kubernetes manifest templates
-│   ├── deploy.tmpl.yaml     # Deployment template
-│   ├── svc.tmpl.yaml        # Service template
-│   └── ingress.tmpl.yaml    # Ingress template (optional)
+├── init-templates/           # K8s manifest templates (*.tmpl.yaml)
+├── k8s/                     # Static K8s manifests (rarely needed)
 ├── argocd/                  # ArgoCD manifest templates
-│   └── application.tmpl.yaml # ArgoCD Application template
 ├── cicd-tests/              # Bats test suites
-│   ├── test_helper.bash     # Shared test utilities
-│   ├── arguments.bats
-│   ├── errors.bats
-│   ├── manifests.bats
-│   ├── argocd.bats
-│   ├── init_env.bats
-│   └── integration.bats
-├── .shellcheckrc            # ShellCheck configuration
-├── .gitignore               # Ignores .env, generated manifests, etc.
+├── specs/                   # Feature specifications
+├── .specify/                # Specification tooling
 └── README.md                # This file
+
+Scaffolded app (my-app/):
+├── .env                     # App configuration (generated by init.sh)
+├── .gitignore               # Ignores generated manifests and .env
+├── Dockerfile               # App Dockerfile (if --dockerfile was used)
+├── main.go / app.py /      # App source (if --dockerfile was used)
+│   server.js / package.json
+└── k8s/                     # Generated K8s manifests (created by build.sh)
+    ├── deploy.yaml
+    ├── svc.yaml
+    └── ingress.yaml
 ```
 
 ---
@@ -301,7 +298,7 @@ bats cicd-tests/
 
 | Symptom | Likely cause | Fix |
 |---------|-------------|-----|
-| `--app-name is required` | Missing from CLI and `.env` | Add `--app-name my-app` or set `APP_NAME=my-app` in `.env` |
+| `--app-name is required` | Missing from CLI and `.env` | Add `--app-name my-app` or set `APP_NAME=my-app` in `.env`, or run from the app directory |
 | `k8s-safe` validation error | App name has uppercase/underscore | Use lowercase, hyphens only |
 | `docker: command not found` | Docker not installed | Install Docker Desktop |
 | `Cannot connect to the Docker daemon` | Docker not running | Start Docker Desktop |
@@ -311,4 +308,3 @@ bats cicd-tests/
 | `envsubst: command not found` | GNU gettext not installed | `brew install gettext` (macOS) or `apt install gettext` (Linux) |
 | `step 'Docker Tag/Push' failed` | Registry auth or connection | Run `docker login`, verify `--registry-url` and `--registry-port` |
 | `init.sh: command not found` | Not in PATH | Run `./init.sh` from the gitops-template directory |
-| `init.sh` clones stale content | Need local changes in template | Use `--local` to copy from your local working tree instead of the remote |
