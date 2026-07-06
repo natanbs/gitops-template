@@ -271,10 +271,16 @@ bats cicd-tests/
 ```
 gitops-template/
 ├── build.sh                 # Main CI/CD pipeline script (fetched via curl at build time)
-├── init.sh                  # Project scaffold script (one-time per app)
-├── init-templates/           # K8s manifest templates (*.tmpl.yaml)
-├── k8s/                     # Static K8s manifests (rarely needed)
-├── argocd/                  # ArgoCD manifest templates
+├── init.sh                  # Project scaffold script (forwarder to init/init.sh)
+├── init/                    # All scaffolding templates and init script
+│   ├── init.sh              #   init driver script
+│   ├── app.env              #   .env template
+│   ├── gitignore            #   .gitignore template
+│   ├── go/                  #   Go Dockerfile + source
+│   ├── python/              #   Python Dockerfile + source
+│   ├── node/                #   Node.js Dockerfile + source
+│   ├── k8s/                 #   K8s manifest templates (*.tmpl.yaml)
+│   └── argocd/              #   ArgoCD manifest templates
 ├── cicd-tests/              # Bats test suites
 ├── specs/                   # Feature specifications
 ├── .specify/                # Specification tooling

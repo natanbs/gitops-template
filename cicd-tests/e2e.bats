@@ -6,8 +6,8 @@ setup() {
 
   # Copy the full template structure
   mkdir -p "$TEST_TEMP_DIR/k8s"
-  cp -r "$PROJECT_ROOT/init-templates" "$TEST_TEMP_DIR/"
-  cp -r "$PROJECT_ROOT/argocd" "$TEST_TEMP_DIR/" 2>/dev/null || true
+  cp -r "$PROJECT_ROOT/init/k8s" "$TEST_TEMP_DIR/init-k8s"
+  cp -r "$PROJECT_ROOT/init/argocd" "$TEST_TEMP_DIR/init-argocd" 2>/dev/null || true
 
   # Create a real Dockerfile for a simple Go HTTP server
   cat > "$TEST_TEMP_DIR/Dockerfile" <<'DOCKERFILE'
@@ -71,7 +71,7 @@ teardown() {
   export K8S_NAMESPACE="e2e-ns"
   export CONTAINER_PORT="8080"
 
-  for tmpl in "$TEST_TEMP_DIR"/init-templates/*.tmpl.yaml; do
+  for tmpl in "$TEST_TEMP_DIR"/init-k8s/*.tmpl.yaml; do
     [ -f "$tmpl" ] || continue
     filename=$(basename "$tmpl" .tmpl.yaml)
     output="$TEST_TEMP_DIR/k8s/${filename}.yaml"
@@ -118,9 +118,9 @@ except Exception as e:
   assert_file_contains "$TEST_TEMP_DIR/k8s/svc.yaml" "port: 8080"
 
   # ── 6. Process ArgoCD template if present ────────────────
-  if [ -f "$TEST_TEMP_DIR/argocd/application.tmpl.yaml" ]; then
+  if [ -f "$TEST_TEMP_DIR/init-argocd/application.tmpl.yaml" ]; then
     export APP_REPO_URL="https://github.com/org/e2e-test-app.git"
-    envsubst < "$TEST_TEMP_DIR/argocd/application.tmpl.yaml" > "$TEST_TEMP_DIR/argocd/application.yaml"
+    envsubst < "$TEST_TEMP_DIR/init-argocd/application.tmpl.yaml" > "$TEST_TEMP_DIR/argocd/application.yaml"
     [ -f "$TEST_TEMP_DIR/argocd/application.yaml" ]
     assert_file_contains "$TEST_TEMP_DIR/argocd/application.yaml" "name: e2e-test-app"
     assert_file_contains "$TEST_TEMP_DIR/argocd/application.yaml" "selfHeal: true"

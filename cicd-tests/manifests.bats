@@ -5,10 +5,10 @@ setup() {
   cd "$TEST_TEMP_DIR"
 
   # Copy templates to test dir and process them with envsubst
-  cp "$PROJECT_ROOT/init-templates/deploy.tmpl.yaml" "$TEST_TEMP_DIR/"
-  cp "$PROJECT_ROOT/init-templates/svc.tmpl.yaml" "$TEST_TEMP_DIR/"
-  if [ -f "$PROJECT_ROOT/init-templates/ingress.tmpl.yaml" ]; then
-    cp "$PROJECT_ROOT/init-templates/ingress.tmpl.yaml" "$TEST_TEMP_DIR/"
+  cp "$PROJECT_ROOT/init/k8s/deploy.tmpl.yaml" "$TEST_TEMP_DIR/"
+  cp "$PROJECT_ROOT/init/k8s/svc.tmpl.yaml" "$TEST_TEMP_DIR/"
+  if [ -f "$PROJECT_ROOT/init/k8s/ingress.tmpl.yaml" ]; then
+    cp "$PROJECT_ROOT/init/k8s/ingress.tmpl.yaml" "$TEST_TEMP_DIR/"
   fi
 
   export APP_NAME="test-app"

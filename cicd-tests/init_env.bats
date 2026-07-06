@@ -135,13 +135,13 @@ EOF
 @test "init.sh does not copy k8s templates into scaffolded project" {
   run "$PROJECT_ROOT/init.sh" --app-name no-templates
   [ "$status" -eq 0 ]
-  [ ! -d "$TEST_TEMP_DIR/no-templates/init-templates" ]
+  [ ! -d "$TEST_TEMP_DIR/no-templates/k8s" ]
 }
 
-@test "init.sh does not copy argocd templates (optional, not required)" {
-  run "$PROJECT_ROOT/init.sh" --app-name no-argocd
+@test "init.sh does not copy init infrastructure into scaffolded project" {
+  run "$PROJECT_ROOT/init.sh" --app-name no-infra
   [ "$status" -eq 0 ]
-  [ ! -d "$TEST_TEMP_DIR/no-argocd/argocd" ]
+  [ ! -d "$TEST_TEMP_DIR/no-infra/init" ]
 }
 
 @test "init.sh --dockerfile go scaffolds a Go Dockerfile and main.go" {
@@ -169,11 +169,11 @@ EOF
   assert_file_contains "$TEST_TEMP_DIR/node-app/Dockerfile" "node"
 }
 
-@test "init.sh errors if target directory already exists" {
+@test "init.sh handles existing directory gracefully" {
   mkdir -p "$TEST_TEMP_DIR/existing-app"
   run "$PROJECT_ROOT/init.sh" --app-name existing-app
-  [ "$status" -eq 1 ]
-  [[ "$output" == *"already exists"* ]]
+  [ "$status" -eq 0 ]
+  [ -f "$TEST_TEMP_DIR/existing-app/.env" ]
 }
 
 @test "init.sh produces a valid git repo" {

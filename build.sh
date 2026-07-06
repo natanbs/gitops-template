@@ -87,7 +87,7 @@ Optional:
   --container-port PORT Container port for K8s manifests (default: 8080)
   --template-repo-raw URL
                         Base URL for fetching K8s templates at build time
-                        (default: $DEFAULT_TEMPLATE_REPO_RAW)
+                        (default: $DEFAULT_TEMPLATE_REPO_RAW, path: init/k8s/)
   --app-repo-url URL    Git repository URL for ArgoCD Application template
                         (default: \$GIT_REPO_BASE/\$APP_NAME.git)
   --auto-deploy         Apply generated manifests to the cluster via kubectl
@@ -231,14 +231,14 @@ step_template() {
 
   mkdir -p "${PROJECT_ROOT}/k8s"
 
-  # Resolve init-templates source: local dir or download from template repo
-  local tmpl_src="${PROJECT_ROOT}/init-templates"
+  # Resolve K8s templates: local init/k8s/ dir or download from template repo
+  local tmpl_src="${PROJECT_ROOT}/init/k8s"
   local tmpl_cleanup=false
   if [ ! -d "$tmpl_src" ]; then
     tmpl_src="$(mktemp -d)"
     tmpl_cleanup=true
     for t in deploy svc ingress; do
-      curl -sLf "${TEMPLATE_REPO_RAW}/init-templates/${t}.tmpl.yaml" \
+      curl -sLf "${TEMPLATE_REPO_RAW}/init/k8s/${t}.tmpl.yaml" \
         -o "${tmpl_src}/${t}.tmpl.yaml" 2>/dev/null || true
     done
   fi
@@ -257,13 +257,12 @@ step_template() {
 
   # Process ArgoCD templates (only if repo URL is set)
   if [ -n "$APP_REPO_URL" ]; then
-    local argocd_src="${PROJECT_ROOT}/argocd"
+    local argocd_src="${PROJECT_ROOT}/init/argocd"
     local argocd_cleanup=false
     if [ ! -d "$argocd_src" ]; then
-      mkdir -p "$argocd_src"
       argocd_src="$(mktemp -d)"
       argocd_cleanup=true
-      curl -sLf "${TEMPLATE_REPO_RAW}/argocd/application.tmpl.yaml" \
+      curl -sLf "${TEMPLATE_REPO_RAW}/init/argocd/application.tmpl.yaml" \
         -o "${argocd_src}/application.tmpl.yaml" 2>/dev/null || true
     fi
 
