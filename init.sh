@@ -113,7 +113,7 @@ git init
 
 # Remove template scaffolding files not needed in the app's repo.
 rm -f init.sh README.md CI-CD-FLOW.md
-rm -f templates/ingress.tmpl.yaml
+rm -f init-templates/ingress.tmpl.yaml
 rm -rf argocd cicd-tests tests
 # Remove any generated yamls that may have been rsynced from k8s/
 rm -f k8s/*.yaml 2>/dev/null || true

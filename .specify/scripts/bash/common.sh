@@ -922,7 +922,7 @@ except Exception:
     [ -f "$core" ] && echo "$core" && return 0
 
     # Priority 5: Repo-root templates (source repo / development fallback)
-    local repo_templates="$repo_root/templates/${template_name}.md"
+    local repo_templates="$repo_root/init-templates/${template_name}.md"
     [ -f "$repo_templates" ] && echo "$repo_templates" && return 0
 
     # Template not found in any location.

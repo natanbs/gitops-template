@@ -218,9 +218,9 @@ step_template() {
   export APP_NAME IMAGE_TAG REGISTRY_URL REGISTRY_PORT REGISTRY_CLUSTER_URL REGISTRY_CLUSTER_PORT K8S_NAMESPACE CONTAINER_PORT APP_REPO_URL
 
   # Process all .tmpl.yaml files from templates/ into k8s/
-  if [ -d "${PROJECT_ROOT}/templates" ]; then
+  if [ -d "${PROJECT_ROOT}/init-templates" ]; then
     mkdir -p "${PROJECT_ROOT}/k8s"
-    for tmpl in "${PROJECT_ROOT}"/templates/*.tmpl.yaml; do
+    for tmpl in "${PROJECT_ROOT}"/init-templates/*.tmpl.yaml; do
       [ -f "$tmpl" ] || continue
       local filename; filename=$(basename "$tmpl" .tmpl.yaml)
       local output="${PROJECT_ROOT}/k8s/${filename}.yaml"
