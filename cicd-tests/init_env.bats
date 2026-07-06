@@ -134,16 +134,16 @@ EOF
 }
 
 @test "init.sh copies k8s templates into scaffolded project" {
-  run "$PROJECT_ROOT/init.sh" --app-name has-k8s
+  run "$PROJECT_ROOT/init.sh" --app-name has-k8s --local
   [ "$status" -eq 0 ]
-  [ -f "$TEST_TEMP_DIR/has-k8s/k8s/deploy.tmpl.yaml" ]
-  [ -f "$TEST_TEMP_DIR/has-k8s/k8s/svc.tmpl.yaml" ]
+  [ -f "$TEST_TEMP_DIR/has-k8s/templates/deploy.tmpl.yaml" ]
+  [ -f "$TEST_TEMP_DIR/has-k8s/templates/svc.tmpl.yaml" ]
 }
 
-@test "init.sh copies argocd templates into scaffolded project" {
-  run "$PROJECT_ROOT/init.sh" --app-name has-argocd
+@test "init.sh does not copy argocd templates (optional, not required)" {
+  run "$PROJECT_ROOT/init.sh" --app-name no-argocd
   [ "$status" -eq 0 ]
-  [ -f "$TEST_TEMP_DIR/has-argocd/argocd/application.tmpl.yaml" ]
+  [ ! -d "$TEST_TEMP_DIR/no-argocd/argocd" ]
 }
 
 @test "init.sh --dockerfile go scaffolds a Go Dockerfile and main.go" {

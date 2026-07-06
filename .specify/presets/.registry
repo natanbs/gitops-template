@@ -1,0 +1,61 @@
+{
+  "schema_version": "1.0",
+  "presets": {
+    "agentic-sdlc": {
+      "version": "1.6.0",
+      "source": "local",
+      "manifest_hash": "sha256:9c66e54cff87b8547728c50ad29e6c73248fd39b70f576d90f557f4e8be48b2a",
+      "enabled": true,
+      "priority": 10,
+      "registered_commands": {
+        "opencode": [
+          "spec.specify",
+          "spec.plan",
+          "spec.clarify",
+          "spec.tasks",
+          "spec.checklist",
+          "spec.analyze",
+          "spec.implement",
+          "spec.constitution",
+          "spec.brainstorm",
+          "spec.converge",
+          "spec.trace"
+        ]
+      },
+      "registered_skills": [],
+      "installed_at": "2026-07-06T10:20:56.911994+00:00"
+    },
+    "agentic-change": {
+      "version": "1.3.0",
+      "source": "local",
+      "manifest_hash": "sha256:e15462b156e7f7466c57c5a90195bb00985c1b1d396a37b31de2132362b57491",
+      "enabled": true,
+      "priority": 10,
+      "registered_commands": {
+        "opencode": [
+          "change.specify",
+          "change.implement",
+          "change.converge",
+          "change.levelup"
+        ]
+      },
+      "registered_skills": [],
+      "installed_at": "2026-07-06T10:20:56.997500+00:00"
+    },
+    "agentic-quick": {
+      "version": "1.2.0",
+      "source": "local",
+      "manifest_hash": "sha256:2527fac6b70208fc30cce55d14bfa8359d904ddfd7a9711da36bcb4a40ecbeb7",
+      "enabled": true,
+      "priority": 10,
+      "registered_commands": {
+        "opencode": [
+          "quick.implement",
+          "quick.levelup"
+        ]
+      },
+      "registered_skills": [],
+      "installed_at": "2026-07-06T10:20:57.048065+00:00"
+    }
+  }
+}

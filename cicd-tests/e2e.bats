@@ -5,7 +5,8 @@ setup() {
   cd "$TEST_TEMP_DIR"
 
   # Copy the full template structure
-  cp -r "$PROJECT_ROOT/k8s" "$TEST_TEMP_DIR/"
+  mkdir -p "$TEST_TEMP_DIR/k8s"
+  cp -r "$PROJECT_ROOT/templates" "$TEST_TEMP_DIR/"
   cp -r "$PROJECT_ROOT/argocd" "$TEST_TEMP_DIR/" 2>/dev/null || true
 
   # Create a real Dockerfile for a simple Go HTTP server
@@ -70,9 +71,10 @@ teardown() {
   export K8S_NAMESPACE="e2e-ns"
   export CONTAINER_PORT="8080"
 
-  for tmpl in "$TEST_TEMP_DIR"/k8s/*.tmpl.yaml; do
+  for tmpl in "$TEST_TEMP_DIR"/templates/*.tmpl.yaml; do
     [ -f "$tmpl" ] || continue
-    output="${tmpl%.tmpl.yaml}.yaml"
+    filename=$(basename "$tmpl" .tmpl.yaml)
+    output="$TEST_TEMP_DIR/k8s/${filename}.yaml"
     envsubst < "$tmpl" > "$output"
     [ -f "$output" ] || {
       echo "Failed to generate $(basename "$output")" >&2

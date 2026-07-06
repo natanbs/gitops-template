@@ -110,6 +110,14 @@ cd "$TARGET_DIR"
 info "Initializing fresh git history..."
 rm -rf .git
 git init
+
+# Remove template scaffolding files not needed in the app's repo.
+rm -f init.sh README.md CI-CD-FLOW.md
+rm -f templates/ingress.tmpl.yaml
+rm -rf argocd cicd-tests tests
+# Remove any generated yamls that may have been rsynced from k8s/
+rm -f k8s/*.yaml 2>/dev/null || true
+
 git add .
 git commit -m "Initial scaffold from gitops-template" >/dev/null
 
@@ -171,7 +179,7 @@ GO
     info "Scaffolded Go Dockerfile + main.go"
     ;;
 
-  python)
+  python|py)
     cat > Dockerfile <<'DOCKER'
 FROM python:3.12-slim
 WORKDIR /app

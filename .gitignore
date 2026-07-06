@@ -1,6 +1,5 @@
 # Generated K8s manifests (output from envsubst)
 k8s/*.yaml
-!k8s/*.tmpl.yaml
 
 # Generated ArgoCD manifests
 argocd/*.yaml
