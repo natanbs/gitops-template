@@ -15,9 +15,9 @@ func main() {
 	http.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(":80", nil)
 }
 
 func port() string {
-	return "8080"
+	return "80"
 }

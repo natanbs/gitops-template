@@ -314,3 +314,13 @@ Scaffolded app (my-app/):
 | `envsubst: command not found` | GNU gettext not installed | `brew install gettext` (macOS) or `apt install gettext` (Linux) |
 | `step 'Docker Tag/Push' failed` | Registry auth or connection | Run `docker login`, verify `--registry-url` and `--registry-port` |
 | `init.sh: command not found` | Not in PATH | Run `./init.sh` from the gitops-template directory |
+
+---
+
+## Service Lifecycle
+
+### Decommissioning a Service
+
+When a service is no longer needed, follow the [decommission procedure](docs/decommission.md)
+to safely remove it from the cluster, clean up the container image, and archive the
+source repository. The procedure covers both GitOps (ArgoCD) and Direct Deploy models.

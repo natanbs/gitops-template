@@ -19,7 +19,7 @@ spec:
       - name: ${APP_NAME}
         image: ${REGISTRY_CLUSTER_URL}:${REGISTRY_CLUSTER_PORT}/${APP_NAME}:${IMAGE_TAG}
         ports:
-        - containerPort: ${CONTAINER_PORT}
+        - containerPort: 80
 ${VOLUME_MOUNTS}
         resources:
           requests:
@@ -31,13 +31,13 @@ ${VOLUME_MOUNTS}
         livenessProbe:
           httpGet:
             path: /healthz
-            port: ${CONTAINER_PORT}
+            port: 80
           initialDelaySeconds: 5
           periodSeconds: 10
         readinessProbe:
           httpGet:
             path: /readyz
-            port: ${CONTAINER_PORT}
+            port: 80
           initialDelaySeconds: 3
           periodSeconds: 5
 ${VOLUMES}

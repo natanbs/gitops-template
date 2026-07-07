@@ -1,5 +1,5 @@
 const http = require("http");
-const port = process.env.PORT || 8080;
+const port = process.env.PORT || 80;
 const server = http.createServer((req, res) => {
   if (req.url === "/healthz" || req.url === "/readyz") {
     res.writeHead(200);

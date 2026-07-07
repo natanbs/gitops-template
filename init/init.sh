@@ -23,7 +23,7 @@ Options:
   --registry-url URL   Container registry hostname (default: localhost)
   --registry-port PORT Container registry port (default: 50000)
   --k8s-ns NS   Kubernetes namespace (default: apps-ns)
-  --container-port PORT App port (default: 8080)
+  --container-port PORT External service port (default: 8080)
   --build             Run build.sh after scaffolding (build + push)
   --deploy            Run build.sh --auto-deploy after scaffolding
   --image-tag TAG     Docker image tag for --build/--deploy (default: v1.0)
@@ -111,6 +111,7 @@ _K8S_NS="$DEF_K8S_NAMESPACE"
 _CONTAINER_PORT="$DEF_CONTAINER_PORT"
 _PVC_NAME=""
 _PVC_MOUNT_PATH=""
+_INGRESS_CLASS=""
 
 if [ -f .env ]; then
   _APP_NAME="$(       grep -s '^APP_NAME='       .env | sed 's/^APP_NAME=//'       || echo "$APP_NAME")"
@@ -120,6 +121,7 @@ if [ -f .env ]; then
   _CONTAINER_PORT="$( grep -s '^CONTAINER_PORT=' .env | sed 's/^CONTAINER_PORT=//' || echo "$DEF_CONTAINER_PORT")"
   _PVC_NAME="$(       grep -s '^PVC_NAME='       .env | sed 's/^PVC_NAME=//'       || true)"
   _PVC_MOUNT_PATH="$( grep -s '^PVC_MOUNT_PATH=' .env | sed 's/^PVC_MOUNT_PATH=//' || true)"
+  _INGRESS_CLASS="$(  grep -s '^INGRESS_CLASS='  .env | sed 's/^INGRESS_CLASS=//'  || true)"
 fi
 
 # CLI overrides take precedence
@@ -153,6 +155,9 @@ if [ -n "$_PVC_NAME" ]; then
   echo "PVC_NAME=$_PVC_NAME" >> .env
   echo "PVC_MOUNT_PATH=${_PVC_MOUNT_PATH:-/data}" >> .env
 fi
+
+# Ingress class (defaults to traefik for k3d clusters)
+echo "INGRESS_CLASS=${_INGRESS_CLASS:-traefik}" >> .env
 
 info "Wrote .env"
 
