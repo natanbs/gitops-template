@@ -12,5 +12,5 @@ spec:
   ports:
   - protocol: TCP
     port: ${CONTAINER_PORT}
-    targetPort: 80
+    targetPort: ${CONTAINER_PORT}
     name: http

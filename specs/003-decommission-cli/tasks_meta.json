@@ -1,0 +1,204 @@
+{
+  "feature": "003-decommission-cli",
+  "created": "2026-07-07T15:27:52+03:00",
+  "tasks": {
+    "T001": {
+      "description": "Create Go module and main.go with flag parsing",
+      "files": "cmd/decommission/main.go",
+      "execution_mode": "ASYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-07T15:31:48+03:00",
+      "completed_at": "2026-07-07T15:32:49+03:00",
+      "result_summary": "Created go.mod and cmd/decommission/main.go with full flag parsing"
+    },
+    "T002": {
+      "description": "Create shared types, errors, constants",
+      "files": "cmd/decommission/types.go",
+      "execution_mode": "ASYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-07T15:33:21+03:00",
+      "completed_at": "2026-07-07T15:33:35+03:00",
+      "result_summary": "Created types.go with AuditRecord, Config, DeploymentModel, error vars"
+    },
+    "T003": {
+      "description": "Implement pre-flight checks",
+      "files": "cmd/decommission/precheck.go",
+      "execution_mode": "SYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-07T15:33:52+03:00",
+      "completed_at": "2026-07-07T15:34:36+03:00",
+      "result_summary": "Created precheck.go with kubectl/git/argocd binary checks, service existence verification, traffic detection",
+      "micro_reviewed_at": "2026-07-07T15:34:42+03:00",
+      "micro_review_passed": true
+    },
+    "T004": {
+      "description": "Implement deployment model detection",
+      "files": "cmd/decommission/detect.go",
+      "execution_mode": "ASYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-07T15:33:52+03:00",
+      "completed_at": "2026-07-07T15:34:36+03:00",
+      "result_summary": "Created detect.go with deployment model detection and ArgoCD source/prune checks"
+    },
+    "T005": {
+      "description": "Implement audit record creation",
+      "files": "cmd/decommission/audit.go",
+      "execution_mode": "ASYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-07T15:33:52+03:00",
+      "completed_at": "2026-07-07T15:34:36+03:00",
+      "result_summary": "Created audit.go with text and JSON audit record output"
+    },
+    "T006": {
+      "description": "Implement container image cleanup",
+      "files": "cmd/decommission/registry.go",
+      "execution_mode": "ASYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-07T15:33:52+03:00",
+      "completed_at": "2026-07-07T15:34:36+03:00",
+      "result_summary": "Created registry.go with Docker Hub, GHCR, ECR, GCR, and local registry cleanup"
+    },
+    "T007": {
+      "description": "Implement GitOps decommission workflow",
+      "files": "cmd/decommission/gitops.go",
+      "execution_mode": "SYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-07T15:35:30+03:00",
+      "completed_at": "2026-07-07T15:35:54+03:00",
+      "result_summary": "Created gitops.go with clone, remove manifests, commit, push, wait for prune",
+      "micro_reviewed_at": "2026-07-07T15:39:17+03:00",
+      "micro_review_passed": true
+    },
+    "T008": {
+      "description": "Implement Direct Deploy workflow",
+      "files": "cmd/decommission/direct.go",
+      "execution_mode": "ASYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-07T15:36:04+03:00",
+      "completed_at": "2026-07-07T15:39:13+03:00",
+      "result_summary": "Created direct.go with kubectl delete in correct order (Deployment→Service→Ingress→ConfigMap/Secret), image ref extraction, resource verification"
+    },
+    "T009": {
+      "description": "Implement PVC detection and prompt",
+      "files": "cmd/decommission/pvc.go",
+      "execution_mode": "ASYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-07T15:36:04+03:00",
+      "completed_at": "2026-07-07T15:39:13+03:00",
+      "result_summary": "Created pvc.go with PVC detection, interactive prompt (Type 'yes' to delete, default retain), audit logging"
+    },
+    "T010": {
+      "description": "Implement dry-run mode",
+      "files": "cmd/decommission/dryrun.go",
+      "execution_mode": "ASYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-07T15:36:04+03:00",
+      "completed_at": "2026-07-07T15:39:13+03:00",
+      "result_summary": "Created dryrun.go with full simulation output: model detection, planned actions, pre-check listing, audit preview"
+    },
+    "T011": {
+      "description": "Write unit tests",
+      "files": "cmd/decommission/decommission_test.go",
+      "execution_mode": "ASYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-07T16:30:26+03:00",
+      "completed_at": "2026-07-07T16:30:59+03:00",
+      "result_summary": "Created decommission_test.go with table-driven tests for DeploymentModel, registry detection, audit records, error vars, Config, writeAudit, dry-run"
+    },
+    "T012": {
+      "description": "Create Makefile and update README",
+      "files": "Makefile, README.md",
+      "execution_mode": "SYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-07T16:30:26+03:00",
+      "completed_at": "2026-07-07T16:30:59+03:00",
+      "result_summary": "Created Makefile with build-decommission and test-decommission targets, updated .gitignore for bin/",
+      "micro_reviewed_at": "2026-07-07T16:31:04+03:00",
+      "micro_review_passed": true
+    },
+    "T013": {
+      "description": "Validate implementation in sandbox",
+      "files": "hack/decommission/",
+      "execution_mode": "ASYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-07T16:31:08+03:00",
+      "completed_at": "2026-07-07T16:33:06+03:00",
+      "result_summary": "Created smoke-test.sh and test-direct.sh in hack/decommission/ for sandbox validation"
+    },
+    "T014": {
+      "description": "Review safety-critical sections",
+      "files": "cmd/decommission/gitops.go, cmd/decommission/precheck.go",
+      "execution_mode": "SYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-07T16:31:08+03:00",
+      "completed_at": "2026-07-07T16:33:06+03:00",
+      "result_summary": "Completed comprehensive safety review (SAFETY_REVIEW.md), fixed 3 safety/correctness issues",
+      "micro_reviewed_at": "2026-07-07T16:33:10+03:00",
+      "micro_review_passed": true
+    },
+    "T015": {
+      "description": "US1/AC3",
+      "files": "Add ArgoCD Application deletion to GitOps workflow (gitops.go)",
+      "execution_mode": "ASYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-07T17:51:40+03:00",
+      "completed_at": "2026-07-07T17:53:05+03:00",
+      "result_summary": "Added deleteApplication() to gitops.go: calls argocd app delete then falls back to kubectl delete application"
+    },
+    "T016": {
+      "description": "FR-012",
+      "files": "Add kubectl context validation to pre-checks (precheck.go)",
+      "execution_mode": "ASYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-07T17:55:23+03:00",
+      "completed_at": "2026-07-07T17:56:03+03:00",
+      "result_summary": "Added checkKubectlContext() to precheck.go: validates current-context is set and cluster-info is reachable"
+    },
+    "T017": {
+      "description": "FR-011",
+      "files": "Add signal handler for SIGINT/SIGTERM (main.go)",
+      "execution_mode": "ASYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-07T17:56:10+03:00",
+      "completed_at": "2026-07-07T17:56:29+03:00",
+      "result_summary": "Added signal handler for SIGINT/SIGTERM in main.go: prints cleanup instructions and exits with code 6"
+    },
+    "T018": {
+      "description": "Edge Cases",
+      "files": "Add RBAC permission pre-checks (precheck.go)",
+      "execution_mode": "ASYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-07T17:56:37+03:00",
+      "completed_at": "2026-07-07T17:56:51+03:00",
+      "result_summary": "Added checkDeletePermissions() to precheck.go: validates kubectl auth can-i for all resource types"
+    },
+    "T019": {
+      "description": "Edge Cases",
+      "files": "Remove or implement ErrServiceDep",
+      "execution_mode": "ASYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-07T17:56:58+03:00",
+      "completed_at": "2026-07-07T17:57:29+03:00",
+      "result_summary": "Removed unused ErrServiceDep from types.go, main.go, and decommission_test.go"
+    }
+  }
+}

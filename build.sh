@@ -78,9 +78,10 @@ Kubernetes manifest templates and deploy to a cluster.
 
 Required:
    --app-name NAME       Application name (k8s-safe: lowercase, alphanumeric only). Optional if .env sets APP_NAME or when run from the service directory (its name is used).
-  --image-tag TAG       Docker image tag (e.g. v1.0, latest)
 
 Optional:
+  --image-tag TAG       Docker image tag (e.g. v1.0, latest). Omit to auto-increment
+                        patch from CURRENT_TAG in .env (e.g. v1.0.0 -> v1.0.1)
   --registry-url URL    Container registry hostname
                         (default: $REGISTRY_URL or k3d-registry.localhost)
   --registry-port PORT  Container registry port
@@ -106,9 +107,10 @@ Dotenv file:
   argument parsing. CLI flags override .env values.
 
 Examples:
-  build.sh --app-name my-app --image-tag v1.0
-  build.sh --app-name my-app --image-tag v1.0 --auto-deploy
-  build.sh --app-name my-app --image-tag v1.0 --app-repo-url https://github.com/org/my-app.git
+  build.sh --app-name my-app                          # auto-version from .env
+  build.sh --app-name my-app --auto-deploy            # auto-version + deploy
+  build.sh --app-name my-app --image-tag v2.0         # explicit tag
+  build.sh --app-name my-app --image-tag v2.0 --auto-deploy
 EOF
   exit 0
 }
@@ -163,11 +165,8 @@ validate_inputs() {
     errors=1
   fi
 
-  # --image-tag: non-empty, basic format
-  if [ -z "$IMAGE_TAG" ]; then
-    error "--image-tag is required"
-    errors=1
-  elif ! echo "$IMAGE_TAG" | grep -qE '^[a-zA-Z0-9][a-zA-Z0-9._-]*$'; then
+  # --image-tag: validate format if provided (optional — auto-versioned when omitted)
+  if [ -n "$IMAGE_TAG" ] && ! echo "$IMAGE_TAG" | grep -qE '^[a-zA-Z0-9][a-zA-Z0-9._-]*$'; then
     error "--image-tag must start with alphanumeric and contain only alphanumeric, dot, underscore, hyphen (got: '$IMAGE_TAG')"
     errors=1
   fi
@@ -181,6 +180,23 @@ validate_inputs() {
   if [ "$errors" -ne 0 ]; then
     exit 1
   fi
+}
+
+# ── Version utilities ────────────────────────────────────────────
+_bump_patch() {
+  local ver="$1"
+  ver="${ver#v}"
+  local major="${ver%%.*}"
+  local rest="${ver#*.}"
+  local minor="${rest%%.*}"
+  local patch
+  if [[ "$rest" == *"."* ]]; then
+    patch="${rest#*.}"
+  else
+    patch=0
+  fi
+  patch=$((patch + 1))
+  echo "v${major}.${minor}.${patch}"
 }
 
 # ── Docker utilities ──────────────────────────────────────────────
@@ -342,6 +358,15 @@ main() {
     APP_REPO_URL="${GIT_REPO_BASE}/${APP_NAME}.git"
   fi
 
+  # Auto-version when no explicit tag given
+  _VERSION_AUTO=false
+  if [ -z "$IMAGE_TAG" ]; then
+    local current_tag="${CURRENT_TAG:-v1.0.0}"
+    IMAGE_TAG="$(_bump_patch "$current_tag")"
+    _VERSION_AUTO=true
+    info "Auto-version: $current_tag -> $IMAGE_TAG"
+  fi
+
   validate_inputs
 
   info "Application: $APP_NAME"
@@ -358,6 +383,21 @@ main() {
     run_step "Deploy" step_deploy
   else
     info "Skipping deploy (use --auto-deploy to enable)"
+  fi
+
+  # Persist new CURRENT_TAG to .env when auto-versioned (not for explicit --image-tag)
+  if [ "$_VERSION_AUTO" = true ] && [ ${#_FAILED_STEPS[@]} -eq 0 ]; then
+    local app_dir
+    app_dir="$(dirname "$PROJECT_ROOT")/$APP_NAME"
+    local env_file="${app_dir}/.env"
+    if [ -f "$env_file" ]; then
+      if sed "s/^CURRENT_TAG=.*/CURRENT_TAG=$IMAGE_TAG/" "$env_file" > "${env_file}.tmp" 2>/dev/null; then
+        mv "${env_file}.tmp" "$env_file"
+        info "Updated CURRENT_TAG=$IMAGE_TAG in $env_file"
+      else
+        rm -f "${env_file}.tmp"
+      fi
+    fi
   fi
 
   if [ ${#_FAILED_STEPS[@]} -gt 0 ]; then

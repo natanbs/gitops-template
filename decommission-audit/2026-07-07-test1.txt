@@ -1,0 +1,10 @@
+Service: test1
+Namespace: default
+Deployment Model: direct
+Decommissioned By: natan
+Date: 2026-07-07T16:03:08Z
+Pre-checks Passed: true
+Resources Removed: []
+Container Image Deleted: false
+Status: success
+Notes: 

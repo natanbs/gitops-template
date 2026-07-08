@@ -26,14 +26,14 @@ Options:
   --container-port PORT External service port (default: 8080)
   --build             Run build.sh after scaffolding (build + push)
   --deploy            Run build.sh --auto-deploy after scaffolding
-  --image-tag TAG     Docker image tag for --build/--deploy (default: v1.0)
+  --image-tag TAG     Docker image tag for --build/--deploy (omit to auto-version)
   --help               Show this help message
 
 Examples:
   ./init.sh --app-name my-api
   ./init.sh --app-name my-api --dockerfile go
-  ./init.sh --app-name my-api --dockerfile go --build
-  ./init.sh --app-name my-api --build --deploy
+  ./init.sh --app-name my-api --build
+  ./init.sh --app-name my-api --build --deploy --image-tag v2.0
 EOF
   exit 0
 }
@@ -44,9 +44,9 @@ DEF_REGISTRY_URL="localhost"
 DEF_REGISTRY_PORT="50000"
 DEF_K8S_NAMESPACE="apps-ns"
 DEF_CONTAINER_PORT="8080"
+DEF_CURRENT_TAG="v1.0.0"
 RUN_BUILD=false
 RUN_DEPLOY=false
-IMAGE_TAG="v1.0"
 
 # CLI overrides (empty = not provided)
 CLI_APP_NAME=""
@@ -55,6 +55,7 @@ CLI_REGISTRY_PORT=""
 CLI_K8S_NAMESPACE=""
 CLI_CONTAINER_PORT=""
 CLI_DOCKERFILE_TYPE=""
+CLI_IMAGE_TAG=""
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -73,8 +74,8 @@ while [ $# -gt 0 ]; do
     --container-port=*)  CLI_CONTAINER_PORT="${1#*=}"; shift ;;
     --build)             RUN_BUILD=true; shift ;;
     --deploy)            RUN_DEPLOY=true; RUN_BUILD=true; shift ;;
-    --image-tag)         IMAGE_TAG="$2"; shift 2 ;;
-    --image-tag=*)       IMAGE_TAG="${1#*=}"; shift ;;
+    --image-tag)         CLI_IMAGE_TAG="$2"; shift 2 ;;
+    --image-tag=*)       CLI_IMAGE_TAG="${1#*=}"; shift ;;
     -h)                  show_help ;;
     *)
       error "Unknown argument: $1"
@@ -119,6 +120,7 @@ if [ -f .env ]; then
   _REGISTRY_PORT="$(  grep -s '^REGISTRY_PORT='  .env | sed 's/^REGISTRY_PORT=//'  || echo "$DEF_REGISTRY_PORT")"
   _K8S_NS="$(         grep -s '^K8S_NAMESPACE='  .env | sed 's/^K8S_NAMESPACE=//'  || echo "$DEF_K8S_NAMESPACE")"
   _CONTAINER_PORT="$( grep -s '^CONTAINER_PORT=' .env | sed 's/^CONTAINER_PORT=//' || echo "$DEF_CONTAINER_PORT")"
+  _CURRENT_TAG="$(     grep -s '^CURRENT_TAG='    .env | sed 's/^CURRENT_TAG=//'    || echo "$DEF_CURRENT_TAG")"
   _PVC_NAME="$(       grep -s '^PVC_NAME='       .env | sed 's/^PVC_NAME=//'       || true)"
   _PVC_MOUNT_PATH="$( grep -s '^PVC_MOUNT_PATH=' .env | sed 's/^PVC_MOUNT_PATH=//' || true)"
   _INGRESS_CLASS="$(  grep -s '^INGRESS_CLASS='  .env | sed 's/^INGRESS_CLASS=//'  || true)"
@@ -148,6 +150,7 @@ REGISTRY_CLUSTER_URL=k3d-reg
 REGISTRY_CLUSTER_PORT=5000
 K8S_NAMESPACE=$_K8S_NS
 CONTAINER_PORT=$_CONTAINER_PORT
+CURRENT_TAG=$_CURRENT_TAG
 EOF
 
 # Preserve PVC settings if present (no CLI flags for these)
@@ -201,20 +204,33 @@ else
 fi
 
 # ── Run build if requested ──────────────────────────────────
-if [ "$RUN_BUILD" = true ]; then
-  if [ -x "$SCRIPT_DIR/../build.sh" ]; then
-    "$SCRIPT_DIR/../build.sh" --app-name "$APP_NAME" --image-tag "$IMAGE_TAG"
-    BUILD_STATUS=$?
-  else
-    warn "build.sh not found in parent directory — skipping build"
-    BUILD_STATUS=1
+_build_tag_arg() {
+  if [ -n "$CLI_IMAGE_TAG" ]; then
+    echo "--image-tag" "$CLI_IMAGE_TAG"
   fi
+}
 
-  if [ "$RUN_DEPLOY" = true ] && [ "$BUILD_STATUS" -eq 0 ]; then
+if [ "$RUN_BUILD" = true ]; then
+  BUILD_STATUS=0
+  if [ "$RUN_DEPLOY" = true ]; then
+    # deploy implies build — single call with --auto-deploy
     if [ -x "$SCRIPT_DIR/../build.sh" ]; then
-      "$SCRIPT_DIR/../build.sh" --app-name "$APP_NAME" --image-tag "$IMAGE_TAG" --auto-deploy
+      # shellcheck disable=SC2046
+      "$SCRIPT_DIR/../build.sh" --app-name "$APP_NAME" $(_build_tag_arg) --auto-deploy
+      BUILD_STATUS=$?
     else
-      warn "build.sh not found in parent directory — skipping deploy"
+      warn "build.sh not found in parent directory — skipping build/deploy"
+      BUILD_STATUS=1
+    fi
+  else
+    # build-only
+    if [ -x "$SCRIPT_DIR/../build.sh" ]; then
+      # shellcheck disable=SC2046
+      "$SCRIPT_DIR/../build.sh" --app-name "$APP_NAME" $(_build_tag_arg)
+      BUILD_STATUS=$?
+    else
+      warn "build.sh not found in parent directory — skipping build"
+      BUILD_STATUS=1
     fi
   fi
 fi
@@ -232,7 +248,7 @@ echo
 if [ "$RUN_BUILD" = false ]; then
   echo "Next steps:"
   echo "  cd ../$APP_NAME"
-  echo "  ../gitops-template/build.sh --app-name $APP_NAME --image-tag v1.0"
-  echo "  ../gitops-template/build.sh --app-name $APP_NAME --image-tag v1.0 --auto-deploy"
+  echo "  ../gitops-template/build.sh --app-name $APP_NAME"
+  echo "  ../gitops-template/build.sh --app-name $APP_NAME --auto-deploy"
 fi
 echo

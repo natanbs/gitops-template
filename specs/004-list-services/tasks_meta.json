@@ -1,0 +1,36 @@
+{
+  "feature": "004-list-services",
+  "created": "2026-07-07T22:49:27+03:00",
+  "tasks": {
+    "T001": {
+      "status": "completed",
+      "started_at": "2026-07-07T22:50:05+03:00",
+      "completed_at": "2026-07-07T22:50:12+03:00",
+      "result_summary": "Added ServiceInfo and ServiceList types to types.go with JSON tags matching command schema contract"
+    },
+    "T002": {
+      "status": "completed",
+      "started_at": "2026-07-07T22:50:18+03:00",
+      "completed_at": "2026-07-07T22:51:10+03:00",
+      "result_summary": "Created list.go with ListServices (kubectl exec discovery), RenderTable (tabwriter), RenderJSON functions"
+    },
+    "T003": {
+      "status": "completed",
+      "started_at": "2026-07-07T22:51:13+03:00",
+      "completed_at": "2026-07-07T22:52:09+03:00",
+      "result_summary": "Wired --list flag into main.go: added flag parsing, mutual exclusion with positional arg (exit 5), dispatch to ListServices/RenderTable/RenderJSON, cluster unreachable handling (exit 6)"
+    },
+    "T004": {
+      "status": "completed",
+      "started_at": "2026-07-07T22:51:13+03:00",
+      "completed_at": "2026-07-07T22:52:10+03:00",
+      "result_summary": "Wrote list_test.go with 7 tests covering RenderTable (empty, single, sorted, Not Ready, Unknown) and RenderJSON (empty, populated, JSON tags)"
+    },
+    "T005": {
+      "status": "completed",
+      "started_at": "2026-07-07T22:52:14+03:00",
+      "completed_at": "2026-07-07T22:52:32+03:00",
+      "result_summary": "Build succeeds, go vet clean, --help shows --list flag, --list with positional arg exits 5, --list --json outputs valid JSON, --list --namespace works"
+    }
+  }
+}
