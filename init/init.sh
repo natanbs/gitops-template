@@ -110,6 +110,7 @@ _REGISTRY_URL="$DEF_REGISTRY_URL"
 _REGISTRY_PORT="$DEF_REGISTRY_PORT"
 _K8S_NS="$DEF_K8S_NAMESPACE"
 _CONTAINER_PORT="$DEF_CONTAINER_PORT"
+_CURRENT_TAG="$DEF_CURRENT_TAG"
 _PVC_NAME=""
 _PVC_MOUNT_PATH=""
 _INGRESS_CLASS=""
@@ -165,7 +166,7 @@ echo "INGRESS_CLASS=${_INGRESS_CLASS:-traefik}" >> .env
 info "Wrote .env"
 
 # ── Write .gitignore ────────────────────────────────────────
-cp "$SCRIPT_DIR/gitignore" .gitignore
+cp -n "$SCRIPT_DIR/gitignore" .gitignore 2>/dev/null || true
 info "Wrote .gitignore"
 
 # ── Copy language-specific scaffolds ────────────────────────
