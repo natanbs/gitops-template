@@ -40,7 +40,11 @@ func dryRun(cfg *Config) (*runResult, error) {
 
 	imageRef := getImageRefForDryRun(cfg.ServiceName, cfg.Namespace)
 	if imageRef != "" {
-		fmt.Printf("  Container image: %s\n", imageRef)
+		repo := imageRef
+		if idx := strings.LastIndex(imageRef, ":"); idx >= 0 {
+			repo = imageRef[:idx]
+		}
+		fmt.Printf("  Container image: %s (all tags)\n", repo)
 	}
 
 	switch model {

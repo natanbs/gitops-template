@@ -56,6 +56,7 @@ type Config struct {
 	JSON        bool
 	AuditDir    string
 	Operator    string
+	ImageRef    string
 }
 
 type stepResult struct {

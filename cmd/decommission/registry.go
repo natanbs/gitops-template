@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -102,17 +103,56 @@ func execGCRDelete(imageRef string) error {
 }
 
 func execLocalDelete(imageRef string) error {
-	parts := strings.SplitN(imageRef, ":", 2)
-	tag := "latest"
 	repo := imageRef
-	if len(parts) == 2 && parts[1] != "" {
-		tag = parts[1]
-		repo = parts[0]
+	if idx := strings.Index(repo, "/"); idx >= 0 {
+		repo = repo[idx+1:]
+	}
+	if idx := strings.LastIndex(repo, ":"); idx >= 0 {
+		repo = repo[:idx]
 	}
 
-	regctlCmd := exec.Command("docker", "run", "--rm", "--network", "host", "instrumentisto/regctl", "tag", "rm", fmt.Sprintf("%s:%s", repo, tag))
-	if out, err := regctlCmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("%w: regctl failed; delete manually: %s", ErrRegistryCleanup, strings.TrimSpace(string(out)))
+	container := findRegistryContainer()
+	if container == "" {
+		return fmt.Errorf("%w: no registry container (k3d-reg or *registry*) found running; delete manually", ErrRegistryCleanup)
 	}
+
+	tagDir := fmt.Sprintf("/var/lib/registry/docker/registry/v2/repositories/%s/_manifests/tags", repo)
+	out, err := exec.Command("docker", "exec", container, "ls", tagDir).Output()
+	if err != nil {
+		return fmt.Errorf("%w: cannot list tags in registry container: %s", ErrRegistryCleanup, strings.TrimSpace(string(out)))
+	}
+
+	tags := strings.Fields(string(out))
+	if len(tags) == 0 {
+		return nil
+	}
+
+	for _, tag := range tags {
+		tagPath := fmt.Sprintf("%s/%s", tagDir, tag)
+		rmCmd := exec.Command("docker", "exec", container, "rm", "-rf", tagPath)
+		if rOut, rErr := rmCmd.CombinedOutput(); rErr != nil {
+			fmt.Fprintf(os.Stderr, "  Warning: failed to delete tag %s: %s\n", tag, strings.TrimSpace(string(rOut)))
+		} else {
+			fmt.Printf("  → Deleted tag %s:%s\n", repo, tag)
+		}
+	}
+
+	repoDir := fmt.Sprintf("/var/lib/registry/docker/registry/v2/repositories/%s", repo)
+	exec.Command("docker", "exec", container, "rm", "-rf", repoDir).Run()
+
 	return nil
+}
+
+func findRegistryContainer() string {
+	cmd := exec.Command("docker", "ps", "--format", "{{.Names}}")
+	out, err := cmd.Output()
+	if err != nil {
+		return ""
+	}
+	for _, name := range strings.Fields(string(out)) {
+		if strings.Contains(name, "registry") || strings.Contains(name, "-reg") || strings.Contains(name, "-registry") {
+			return name
+		}
+	}
+	return ""
 }

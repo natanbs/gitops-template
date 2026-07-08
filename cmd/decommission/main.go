@@ -63,6 +63,13 @@ func main() {
 
 	signal.Stop(sigCh)
 
+	if len(results.Removed) > 0 {
+		fmt.Println("\n  Resources deleted:")
+		for _, r := range results.Removed {
+			fmt.Printf("    • %s\n", r)
+		}
+	}
+
 	fmt.Printf("\n✓ Decommission of %s complete\n", cfg.ServiceName)
 
 	notesStr := ""
@@ -124,11 +131,12 @@ func run(cfg *Config) (*runResult, []string, error) {
 	switch model {
 	case ModelGitOps:
 		g := &gitopsDecommissioner{cfg: cfg}
-		removed, err := g.run()
+		removed, imageRef, err := g.run()
 		if err != nil {
 			return nil, notes, fmt.Errorf("gitops decommission: %w", err)
 		}
 		result.Removed = removed
+		result.ImageRef = imageRef
 	case ModelDirect:
 		d := &directDecommissioner{cfg: cfg}
 		removed, imageRef, err := d.run()
@@ -151,9 +159,19 @@ func run(cfg *Config) (*runResult, []string, error) {
 		}
 	}
 
-	if result.ImageRef != "" {
+	imageRef := result.ImageRef
+	if imageRef == "" && cfg.ImageRef != "" {
+		imageRef = cfg.ImageRef
+	}
+	if imageRef == "" {
+		fmt.Printf("  Container image ref (e.g. k3d-reg:5000/%s) or leave empty to skip: ", cfg.ServiceName)
+		var input string
+		fmt.Scanln(&input)
+		imageRef = strings.TrimSpace(input)
+	}
+	if imageRef != "" {
 		fmt.Println("  → Cleaning up container image from registry")
-		if err := deleteImage(result.ImageRef, cfg); err != nil {
+		if err := deleteImage(imageRef, cfg); err != nil {
 			fmt.Fprintf(os.Stderr, "  Warning: image cleanup: %v\n", err)
 		} else {
 			result.ImageDeleted = true
@@ -174,6 +192,7 @@ func parseFlags() (cfg *Config, listMode bool, listJSON bool) {
 		showVer   = flag.Bool("version", false, "Print version and exit")
 		showHelp  = flag.Bool("help", false, "Print help text and exit")
 		flagList  = flag.Bool("list", false, "List all available services")
+		flagImage = flag.String("image", "", "Container image ref (e.g. k3d-reg:5000/insurance); needed when deployment is gone")
 	)
 
 	flag.Usage = func() {
@@ -199,6 +218,7 @@ func parseFlags() (cfg *Config, listMode bool, listJSON bool) {
 		}
 		return &Config{
 			Namespace: *namespace,
+			ImageRef:  *flagImage,
 		}, true, *jsonOut
 	}
 
@@ -220,6 +240,7 @@ func parseFlags() (cfg *Config, listMode bool, listJSON bool) {
 		JSON:        *jsonOut,
 		AuditDir:    *auditDir,
 		Operator:    *operator,
+		ImageRef:    *flagImage,
 	}, false, false
 }
 

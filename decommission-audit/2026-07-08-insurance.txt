@@ -1,10 +1,10 @@
 Service: insurance
 Namespace: apps-ns
-Deployment Model: gitops
+Deployment Model: direct
 Decommissioned By: natan
-Date: 2026-07-08T09:24:51Z
-Pre-checks Passed: true
+Date: 2026-07-08T11:08:21Z
+Pre-checks Passed: false
 Resources Removed: []
-Container Image Deleted: false
+Container Image Deleted: true
 Status: success
 Notes: 

@@ -32,5 +32,6 @@ vendor/
 *.out
 
 # Decommission CLI binary
+/decommission-audit
 /decommission
 /bin/
