@@ -91,10 +91,12 @@ if [ -n "$CLI_DOCKERFILE_TYPE" ]; then
 fi
 
 TARGET_DIR="$(dirname "$PWD")/$APP_NAME"
+_APP_EXISTS=false
 
 # ── Create app directory ────────────────────────────────────
 if [ -d "$TARGET_DIR" ]; then
-  info "App directory exists — updating .env and templates"
+  _APP_EXISTS=true
+  info "App directory exists — updating .env"
 else
   info "Creating $APP_NAME..."
   mkdir -p "$TARGET_DIR"
@@ -211,13 +213,21 @@ _build_tag_arg() {
   fi
 }
 
+_build_extra_args() {
+  # When updating an existing app, skip template generation to avoid
+  # overwriting customized K8s manifests (volumes, resources, env, etc.)
+  if [ "$_APP_EXISTS" = true ]; then
+    echo "--skip-template"
+  fi
+}
+
 if [ "$RUN_BUILD" = true ]; then
   BUILD_STATUS=0
   if [ "$RUN_DEPLOY" = true ]; then
     # deploy implies build — single call with --auto-deploy
     if [ -x "$SCRIPT_DIR/../build.sh" ]; then
       # shellcheck disable=SC2046
-      "$SCRIPT_DIR/../build.sh" --app-name "$APP_NAME" $(_build_tag_arg) --auto-deploy
+      "$SCRIPT_DIR/../build.sh" --app-name "$APP_NAME" $(_build_tag_arg) $(_build_extra_args) --auto-deploy
       BUILD_STATUS=$?
     else
       warn "build.sh not found in parent directory — skipping build/deploy"
@@ -227,7 +237,7 @@ if [ "$RUN_BUILD" = true ]; then
     # build-only
     if [ -x "$SCRIPT_DIR/../build.sh" ]; then
       # shellcheck disable=SC2046
-      "$SCRIPT_DIR/../build.sh" --app-name "$APP_NAME" $(_build_tag_arg)
+      "$SCRIPT_DIR/../build.sh" --app-name "$APP_NAME" $(_build_tag_arg) $(_build_extra_args)
       BUILD_STATUS=$?
     else
       warn "build.sh not found in parent directory — skipping build"

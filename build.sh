@@ -57,6 +57,7 @@ APP_REPO_URL=""
 AUTO_DEPLOY=false
 CONTINUE_ON_ERROR=false
 FORCE_OVERWRITE=false
+SKIP_TEMPLATE=false
 _FAILED_STEPS=()
 
 # ── Cleanup handler ────────────────────────────────────────────────
@@ -97,6 +98,7 @@ Optional:
   --auto-deploy         Apply generated manifests to the cluster via kubectl
   --continue-on-error   Continue pipeline even if a step fails
   --force               Overwrite existing K8s/ArgoCD manifest files
+  --skip-template       Skip K8s/ArgoCD template generation
   --help                Show this help message and exit
 
 Environment variables:
@@ -141,6 +143,7 @@ parse_args() {
       --auto-deploy)       AUTO_DEPLOY=true; shift ;;
       --continue-on-error) CONTINUE_ON_ERROR=true; shift ;;
       --force)             FORCE_OVERWRITE=true; shift ;;
+      --skip-template)     SKIP_TEMPLATE=true; shift ;;
       -h)                  show_help ;;
       --)                  shift; break ;;
       -*)
@@ -384,7 +387,12 @@ main() {
 
   run_step "Docker Build"     step_build
   run_step "Docker Tag/Push"  step_tag_push
-  run_step "Template Process" step_template
+
+  if [ "$SKIP_TEMPLATE" = true ]; then
+    info "Skipping template generation (--skip-template)"
+  else
+    run_step "Template Process" step_template
+  fi
 
   if [ "$AUTO_DEPLOY" = true ]; then
     run_step "Deploy" step_deploy
