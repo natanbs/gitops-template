@@ -19,6 +19,10 @@ spec:
       - name: ${APP_NAME}
         image: ${REGISTRY_CLUSTER_URL}:${REGISTRY_CLUSTER_PORT}/${APP_NAME}:${IMAGE_TAG}
         imagePullPolicy: Always
+        envFrom:
+        - secretRef:
+            name: ${APP_NAME}-env
+            optional: true
         ports:
         - containerPort: ${CONTAINER_PORT}
 ${VOLUME_MOUNTS}
