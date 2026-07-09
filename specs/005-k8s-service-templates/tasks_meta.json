@@ -1,0 +1,70 @@
+{
+  "feature": "005-k8s-service-templates",
+  "created": "2026-07-10T00:07:48+03:00",
+  "tasks": {
+    "T001": {
+      "description": "Add PVC=false to default .env and PVC=true .env population logic",
+      "files": "init/init.sh",
+      "execution_mode": "SYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-10T00:10:30+03:00",
+      "completed_at": "2026-07-10T00:11:43+03:00",
+      "result_summary": "Added PVC=false to default .env, PVC reading from existing .env, PVC=true population logic, and k8s template rendering"
+    },
+    "T002": {
+      "description": "Create pvc.tmpl.yaml",
+      "files": "init/k8s/pvc.tmpl.yaml",
+      "execution_mode": "SYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-10T00:11:48+03:00",
+      "completed_at": "2026-07-10T00:12:06+03:00",
+      "result_summary": "Created pvc.tmpl.yaml with PVC_NAME, PVC_SIZE, PVC_ACCESS_MODE, PVC_STORAGE_CLASS variables"
+    },
+    "T003": {
+      "description": "Update deploy.tmpl.yaml PVC placeholder logic",
+      "files": "init/k8s/deploy.tmpl.yaml",
+      "execution_mode": "SYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-10T00:12:09+03:00",
+      "completed_at": "2026-07-10T00:12:09+03:00",
+      "result_summary": "deploy.tmpl.yaml already has VOLUME_MOUNTS/VOLUMES placeholders; init.sh rendering logic handles substitution"
+    },
+    "T004": {
+      "description": "Extend init.sh PVC preservation for all PVC vars",
+      "files": "init/init.sh",
+      "execution_mode": "SYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-10T00:12:27+03:00",
+      "completed_at": "2026-07-10T00:12:27+03:00",
+      "result_summary": "Extended PVC preservation: PVC_SIZE, PVC_ACCESS_MODE, PVC_STORAGE_CLASS now read from existing .env and populated when PVC=true"
+    },
+    "T005": {
+      "description": "PVC toggle true to false warning and --force flag",
+      "files": "init/init.sh",
+      "execution_mode": "SYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-10T00:14:30+03:00",
+      "completed_at": "2026-07-10T00:14:30+03:00",
+      "result_summary": "Implemented PVC toggle true→false warning with --force flag suppression",
+      "micro_reviewed_at": "2026-07-10T00:51:47+03:00",
+      "micro_review_passed": true,
+      "quality_gate_passed": true,
+      "quality_gate_at": "2026-07-10T00:51:50+03:00"
+    },
+    "T006": {
+      "description": "Manual end-to-end PVC test",
+      "files": "init/init.sh",
+      "execution_mode": "SYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-10T00:51:44+03:00",
+      "completed_at": "2026-07-10T00:52:11+03:00",
+      "result_summary": "E2E test passed: PVC=false by default, PVC=true generates full stack (env vars + pvc.yaml + volumeMounts/volumes), PVC toggle leaves manifests intact"
+    }
+  }
+}

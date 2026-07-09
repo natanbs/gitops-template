@@ -56,6 +56,7 @@ CLI_K8S_NAMESPACE=""
 CLI_CONTAINER_PORT=""
 CLI_DOCKERFILE_TYPE=""
 CLI_IMAGE_TAG=""
+CLI_FORCE=false
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -76,6 +77,7 @@ while [ $# -gt 0 ]; do
     --deploy)            RUN_DEPLOY=true; RUN_BUILD=true; shift ;;
     --image-tag)         CLI_IMAGE_TAG="$2"; shift 2 ;;
     --image-tag=*)       CLI_IMAGE_TAG="${1#*=}"; shift ;;
+    --force)             CLI_FORCE=true; shift ;;
     -h)                  show_help ;;
     *)
       error "Unknown argument: $1"
@@ -113,8 +115,12 @@ _REGISTRY_PORT="$DEF_REGISTRY_PORT"
 _K8S_NS="$DEF_K8S_NAMESPACE"
 _CONTAINER_PORT="$DEF_CONTAINER_PORT"
 _CURRENT_TAG="$DEF_CURRENT_TAG"
+_PVC=""
 _PVC_NAME=""
 _PVC_MOUNT_PATH=""
+_PVC_SIZE=""
+_PVC_ACCESS_MODE=""
+_PVC_STORAGE_CLASS=""
 _INGRESS_CLASS=""
 
 if [ -f .env ]; then
@@ -124,8 +130,12 @@ if [ -f .env ]; then
   _K8S_NS="$(         grep -s '^K8S_NAMESPACE='  .env | sed 's/^K8S_NAMESPACE=//'  || echo "$DEF_K8S_NAMESPACE")"
   _CONTAINER_PORT="$( grep -s '^CONTAINER_PORT=' .env | sed 's/^CONTAINER_PORT=//' || echo "$DEF_CONTAINER_PORT")"
   _CURRENT_TAG="$(     grep -s '^CURRENT_TAG='    .env | sed 's/^CURRENT_TAG=//'    || echo "$DEF_CURRENT_TAG")"
+  _PVC="$(             grep -s '^PVC='             .env | sed 's/^PVC=//'             || true)"
   _PVC_NAME="$(       grep -s '^PVC_NAME='       .env | sed 's/^PVC_NAME=//'       || true)"
   _PVC_MOUNT_PATH="$( grep -s '^PVC_MOUNT_PATH=' .env | sed 's/^PVC_MOUNT_PATH=//' || true)"
+  _PVC_SIZE="$(       grep -s '^PVC_SIZE='       .env | sed 's/^PVC_SIZE=//'       || true)"
+  _PVC_ACCESS_MODE="$( grep -s '^PVC_ACCESS_MODE=' .env | sed 's/^PVC_ACCESS_MODE=//' || true)"
+  _PVC_STORAGE_CLASS="$( grep -s '^PVC_STORAGE_CLASS=' .env | sed 's/^PVC_STORAGE_CLASS=//' || true)"
   _INGRESS_CLASS="$(  grep -s '^INGRESS_CLASS='  .env | sed 's/^INGRESS_CLASS=//'  || true)"
 fi
 
@@ -156,16 +166,87 @@ CONTAINER_PORT=$_CONTAINER_PORT
 CURRENT_TAG=$_CURRENT_TAG
 EOF
 
-# Preserve PVC settings if present (no CLI flags for these)
-if [ -n "$_PVC_NAME" ]; then
-  echo "PVC_NAME=$_PVC_NAME" >> .env
-  echo "PVC_MOUNT_PATH=${_PVC_MOUNT_PATH:-/data}" >> .env
+if [ "$_PVC" = "true" ]; then
+  cat >> .env <<EOF
+PVC=true
+PVC_NAME=${_PVC_NAME:-$_APP_NAME-data}
+PVC_MOUNT_PATH=${_PVC_MOUNT_PATH:-/data}
+PVC_SIZE=${_PVC_SIZE:-1Gi}
+PVC_ACCESS_MODE=${_PVC_ACCESS_MODE:-ReadWriteOnce}
+PVC_STORAGE_CLASS=${_PVC_STORAGE_CLASS:-standard}
+EOF
+else
+  echo "PVC=false" >> .env
+  if [ -n "$_PVC_NAME" ]; then
+    echo "PVC_NAME=$_PVC_NAME" >> .env
+    echo "PVC_MOUNT_PATH=${_PVC_MOUNT_PATH:-/data}" >> .env
+  fi
 fi
 
 # Ingress class (defaults to traefik for k3d clusters)
 echo "INGRESS_CLASS=${_INGRESS_CLASS:-traefik}" >> .env
 
 info "Wrote .env"
+
+# ── PVC toggle warning ─────────────────────────────────────────
+# Detect PVC being turned off: existing .env had PVC=true but new .env won't
+_PVC_NEW=false
+# Get the last PVC= line from .env (first match is default PVC=false)
+_grep_pvc=$(grep -s '^PVC=' .env | tail -1 | sed 's/^PVC=//' || true)
+[ "$_grep_pvc" = "true" ] && _PVC_NEW=true
+if [ "$_PVC" = "true" ] && [ "$_PVC_NEW" != "true" ] && [ "$CLI_FORCE" != "true" ]; then
+  warn "PVC was previously enabled but is now disabled."
+  warn "Existing PVC manifests in k8s/pvc.yaml have been left in place."
+  warn "Use --force to regenerate templates without PVC resources."
+fi
+
+# Determine effective PVC state from the rewritten .env for template rendering
+_PVC_ACTIVE=false
+[ "$_PVC_NEW" = "true" ] && _PVC_ACTIVE=true
+
+# ── Render k8s templates ──────────────────────────────────────
+mkdir -p k8s argocd
+
+# Compute PVC name and mount path (used for both live templates and exports)
+_PVC_NAME_FINAL="${_PVC_NAME:-$_APP_NAME-data}"
+_PVC_MOUNT_FINAL="${_PVC_MOUNT_PATH:-/data}"
+
+if [ "$_PVC_ACTIVE" = "true" ]; then
+  VOLUME_MOUNTS="        volumeMounts:
+        - name: ${_PVC_NAME_FINAL}
+          mountPath: ${_PVC_MOUNT_FINAL}"
+  VOLUMES="      volumes:
+      - name: ${_PVC_NAME_FINAL}
+        persistentVolumeClaim:
+          claimName: ${_PVC_NAME_FINAL}"
+else
+  VOLUME_MOUNTS=""
+  VOLUMES=""
+fi
+export APP_NAME="${_APP_NAME}" K8S_NAMESPACE="${_K8S_NS}" CONTAINER_PORT="${_CONTAINER_PORT}" VOLUME_MOUNTS VOLUMES
+export PVC_NAME="${_PVC_NAME_FINAL}" PVC_MOUNT_PATH="${_PVC_MOUNT_FINAL}" PVC_SIZE="${_PVC_SIZE:-1Gi}" PVC_ACCESS_MODE="${_PVC_ACCESS_MODE:-ReadWriteOnce}" PVC_STORAGE_CLASS="${_PVC_STORAGE_CLASS:-standard}"
+export IMAGE_TAG="${CURRENT_TAG:-v1.0.0}"
+export REGISTRY_CLUSTER_URL="${REGISTRY_CLUSTER_URL:-k3d-reg}"
+export REGISTRY_CLUSTER_PORT="${REGISTRY_CLUSTER_PORT:-5000}"
+export INGRESS_CLASS="${_INGRESS_CLASS:-traefik}"
+for tmpl in "$SCRIPT_DIR/k8s"/*.tmpl.yaml; do
+  [ -f "$tmpl" ] || continue
+  filename=$(basename "$tmpl" .tmpl.yaml)
+  # Only render pvc template when PVC is active
+  if [ "$filename" = "pvc" ] && [ "$_PVC_ACTIVE" != "true" ]; then
+    continue
+  fi
+  output="k8s/${filename}.yaml"
+  envsubst < "$tmpl" > "$output"
+  info "  Rendered: $output"
+done
+for tmpl in "$SCRIPT_DIR/argocd"/*.tmpl.yaml; do
+  [ -f "$tmpl" ] || continue
+  filename=$(basename "$tmpl" .tmpl.yaml)
+  output="argocd/${filename}.yaml"
+  envsubst < "$tmpl" > "$output"
+  info "  Rendered: $output"
+done
 
 # ── Write .gitignore ────────────────────────────────────────
 cp -n "$SCRIPT_DIR/gitignore" .gitignore 2>/dev/null || true
