@@ -56,6 +56,7 @@ GIT_REPO_BASE="${GIT_REPO_BASE:-$DEFAULT_GIT_REPO_BASE}"
 APP_REPO_URL=""
 AUTO_DEPLOY=false
 CONTINUE_ON_ERROR=false
+FORCE_OVERWRITE=false
 _FAILED_STEPS=()
 
 # ── Cleanup handler ────────────────────────────────────────────────
@@ -95,6 +96,7 @@ Optional:
                         (default: \$GIT_REPO_BASE/\$APP_NAME.git)
   --auto-deploy         Apply generated manifests to the cluster via kubectl
   --continue-on-error   Continue pipeline even if a step fails
+  --force               Overwrite existing K8s/ArgoCD manifest files
   --help                Show this help message and exit
 
 Environment variables:
@@ -138,6 +140,7 @@ parse_args() {
       --app-repo-url=*)    APP_REPO_URL="${1#*=}"; shift ;;
       --auto-deploy)       AUTO_DEPLOY=true; shift ;;
       --continue-on-error) CONTINUE_ON_ERROR=true; shift ;;
+      --force)             FORCE_OVERWRITE=true; shift ;;
       -h)                  show_help ;;
       --)                  shift; break ;;
       -*)
@@ -282,6 +285,10 @@ step_template() {
     [ -f "$tmpl" ] || continue
     local filename; filename=$(basename "$tmpl" .tmpl.yaml)
     local output="${app_dir}/k8s/${filename}.yaml"
+    if [ -f "$output" ] && [ "$FORCE_OVERWRITE" = false ]; then
+      info "  Skipping $(basename "$tmpl") -> $output (exists, use --force to overwrite)"
+      continue
+    fi
     info "  Template: $(basename "$tmpl") -> ${app_dir}/k8s/${filename}.yaml"
     envsubst < "$tmpl" > "$output" || return 1
   done
