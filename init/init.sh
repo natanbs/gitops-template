@@ -229,6 +229,8 @@ export IMAGE_TAG="${CURRENT_TAG:-v1.0.0}"
 export REGISTRY_CLUSTER_URL="${REGISTRY_CLUSTER_URL:-k3d-reg}"
 export REGISTRY_CLUSTER_PORT="${REGISTRY_CLUSTER_PORT:-5000}"
 export INGRESS_CLASS="${_INGRESS_CLASS:-traefik}"
+export GIT_REPO_BASE="${GIT_REPO_BASE:-https://github.com/natanbs}"
+export APP_REPO_URL="${GIT_REPO_BASE}/${_APP_NAME}.git"
 for tmpl in "$SCRIPT_DIR/k8s"/*.tmpl.yaml; do
   [ -f "$tmpl" ] || continue
   filename=$(basename "$tmpl" .tmpl.yaml)
