@@ -225,7 +225,6 @@ else
 fi
 export APP_NAME="${_APP_NAME}" K8S_NAMESPACE="${_K8S_NS}" CONTAINER_PORT="${_CONTAINER_PORT}" VOLUME_MOUNTS VOLUMES
 export PVC_NAME="${_PVC_NAME_FINAL}" PVC_MOUNT_PATH="${_PVC_MOUNT_FINAL}" PVC_SIZE="${_PVC_SIZE:-1Gi}" PVC_ACCESS_MODE="${_PVC_ACCESS_MODE:-ReadWriteOnce}" PVC_STORAGE_CLASS="${_PVC_STORAGE_CLASS:-standard}"
-export IMAGE_TAG="${_CURRENT_TAG:-v1.0.0}"
 export REGISTRY_CLUSTER_URL="${REGISTRY_CLUSTER_URL:-k3d-reg}"
 export REGISTRY_CLUSTER_PORT="${REGISTRY_CLUSTER_PORT:-5000}"
 export INGRESS_CLASS="${_INGRESS_CLASS:-traefik}"
@@ -233,6 +232,8 @@ export GIT_REPO_BASE="${GIT_REPO_BASE:-https://github.com/natanbs}"
 export APP_REPO_URL="${GIT_REPO_BASE}/${_APP_NAME}.git"
 # Only render templates for new apps — skip for existing to preserve customizations
 if [ "$_APP_EXISTS" != true ]; then
+  IMAGE_TAG="${_CURRENT_TAG:-v1.0.0}"
+  export IMAGE_TAG
   for tmpl in "$SCRIPT_DIR/k8s"/*.tmpl.yaml; do
     [ -f "$tmpl" ] || continue
     filename=$(basename "$tmpl" .tmpl.yaml)
@@ -251,6 +252,7 @@ if [ "$_APP_EXISTS" != true ]; then
     envsubst < "$tmpl" > "$output"
     info "  Rendered: $output"
   done
+  unset IMAGE_TAG
 fi
 
 # ── Write .gitignore ────────────────────────────────────────
