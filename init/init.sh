@@ -335,6 +335,7 @@ step "Scaffold complete"
 echo
 echo "  Directory: $TARGET_DIR"
 echo "  App name:  $APP_NAME"
+echo "  Version:   $_CURRENT_TAG"
 echo "  Registry:  $REGISTRY_URL:$REGISTRY_PORT"
 echo "  Namespace: $K8S_NAMESPACE"
 echo
