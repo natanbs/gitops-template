@@ -289,11 +289,19 @@ step_template() {
     local filename; filename=$(basename "$tmpl" .tmpl.yaml)
     local output="${app_dir}/k8s/${filename}.yaml"
     if [ -f "$output" ] && [ "$FORCE_OVERWRITE" = false ]; then
-      info "  Skipping $(basename "$tmpl") -> $output (exists, use --force to overwrite)"
-      continue
+      # For deploy.yaml, update only the image tag to preserve customizations
+      if [ "$filename" = "deploy" ]; then
+        local full_image_ref="${REGISTRY_CLUSTER_URL}:${REGISTRY_CLUSTER_PORT}/${APP_NAME}:${IMAGE_TAG}"
+        info "  Updating image in existing ${app_dir}/k8s/${filename}.yaml"
+        sed "s|^\([[:space:]]*image:\).*|\1 ${full_image_ref}|" "$output" > "${output}.tmp" && mv "${output}.tmp" "$output" || return 1
+      else
+        info "  Skipping $(basename "$tmpl") -> $output (exists, use --force to overwrite)"
+        continue
+      fi
+    else
+      info "  Template: $(basename "$tmpl") -> ${app_dir}/k8s/${filename}.yaml"
+      envsubst < "$tmpl" > "$output" || return 1
     fi
-    info "  Template: $(basename "$tmpl") -> ${app_dir}/k8s/${filename}.yaml"
-    envsubst < "$tmpl" > "$output" || return 1
   done
 
   if [ "$tmpl_cleanup" = true ]; then
