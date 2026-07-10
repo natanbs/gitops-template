@@ -335,9 +335,11 @@ echo
 step() { printf "\n${CYAN}=== %s ===${NC}\n" "$*"; }
 step "Scaffold complete"
 echo
+# Re-read version from .env (build.sh may have bumped CURRENT_TAG)
+_VERSION_PRINT="$(grep -s '^CURRENT_TAG=' .env | sed 's/^CURRENT_TAG=//' || echo "$_CURRENT_TAG")"
 echo "  Directory: $TARGET_DIR"
 echo "  App name:  $APP_NAME"
-echo "  Version:   $_CURRENT_TAG"
+echo "  Version:   $_VERSION_PRINT"
 echo "  Registry:  $REGISTRY_URL:$REGISTRY_PORT"
 echo "  Namespace: $K8S_NAMESPACE"
 echo
