@@ -402,13 +402,8 @@ main() {
     run_step "Template Process" step_template
   fi
 
-  if [ "$AUTO_DEPLOY" = true ]; then
-    run_step "Deploy" step_deploy
-  else
-    info "Skipping deploy (use --auto-deploy to enable)"
-  fi
-
-  # Persist new CURRENT_TAG to .env when auto-versioned (not for explicit --image-tag)
+  # Persist new CURRENT_TAG to .env before deploy, so a deploy failure
+  # doesn't lose the version bump (deploy.yaml was already updated above).
   if [ "$_VERSION_AUTO" = true ] && [ ${#_FAILED_STEPS[@]} -eq 0 ]; then
     local app_dir
     app_dir="$(dirname "$PROJECT_ROOT")/$APP_NAME"
@@ -421,6 +416,12 @@ main() {
         rm -f "${env_file}.tmp"
       fi
     fi
+  fi
+
+  if [ "$AUTO_DEPLOY" = true ]; then
+    run_step "Deploy" step_deploy
+  else
+    info "Skipping deploy (use --auto-deploy to enable)"
   fi
 
   if [ ${#_FAILED_STEPS[@]} -gt 0 ]; then
