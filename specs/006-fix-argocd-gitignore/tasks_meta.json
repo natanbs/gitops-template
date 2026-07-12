@@ -1,0 +1,36 @@
+{
+  "feature": "006-fix-argocd-gitignore",
+  "created": "2026-07-10T13:38:17+03:00",
+  "tasks": {
+    "T001": {
+      "description": "Remove k8s/*.yaml and argocd/*.yaml rules from init/gitignore",
+      "files": "init/gitignore",
+      "execution_mode": "ASYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-10T14:02:25+03:00",
+      "completed_at": "2026-07-10T14:02:37+03:00",
+      "result_summary": "Removed k8s/*.yaml and argocd/*.yaml rules from init/gitignore"
+    },
+    "T002": {
+      "description": "Verify end-to-end: scaffold app, confirm k8s/argocd tracked, check initial commit includes manifests",
+      "files": "init/gitignore",
+      "execution_mode": "SYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-10T14:02:49+03:00",
+      "completed_at": "2026-07-10T14:08:10+03:00",
+      "result_summary": "Verified: k8s/deploy.yaml, k8s/ingress.yaml, k8s/svc.yaml, argocd/application.yaml all git-tracked after init.sh"
+    },
+    "T003": {
+      "description": "Run build.sh after scaffolding, verify rendered k8s/argocd files are not ignored by git",
+      "files": "init/gitignore",
+      "execution_mode": "SYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-10T14:08:21+03:00",
+      "completed_at": "2026-07-10T14:09:52+03:00",
+      "result_summary": "Verified: k8s/argocd files not ignored by git in scaffolded app, build.sh can write to them"
+    }
+  }
+}

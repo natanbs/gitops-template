@@ -58,6 +58,7 @@ AUTO_DEPLOY=false
 CONTINUE_ON_ERROR=false
 FORCE_OVERWRITE=false
 SKIP_TEMPLATE=false
+CRONJOB="${CRONJOB:-false}"
 _FAILED_STEPS=()
 
 # ── Cleanup handler ────────────────────────────────────────────────
@@ -248,15 +249,58 @@ step_tag_push() {
   export IMAGE_FULL_REF="$full_name"
 }
 
+# ── Pipeline (CronJob) image steps ───────────────────────────────
+_full_pipeline_image_name() {
+  if [ -n "$REGISTRY_PORT" ] && [ "$REGISTRY_PORT" != "443" ] && [ "$REGISTRY_PORT" != "80" ]; then
+    echo "${REGISTRY_URL}:${REGISTRY_PORT}/tech-companies-pipeline:${IMAGE_TAG}"
+  else
+    echo "${REGISTRY_URL}/tech-companies-pipeline:${IMAGE_TAG}"
+  fi
+}
+
+step_build_pipeline() {
+  step "Pipeline: Building Docker Image"
+  docker build -f Dockerfile.pipeline -t "tech-companies-pipeline:${IMAGE_TAG}" . || return 1
+}
+
+step_tag_push_pipeline() {
+  local full_name
+  full_name=$(_full_pipeline_image_name)
+
+  step "Pipeline: Tagging Image"
+  docker tag "tech-companies-pipeline:${IMAGE_TAG}" "$full_name" || return 1
+
+  step "Pipeline: Pushing Image to Registry"
+  docker push "$full_name" || return 1
+}
+
+step_update_cronjob() {
+  step "Pipeline: Updating CronJob Manifest"
+
+  local app_dir
+  app_dir="$(dirname "$PROJECT_ROOT")/$APP_NAME"
+  local cronjob="${app_dir}/k8s/cronjob.yaml"
+  local full_image_ref="${REGISTRY_CLUSTER_URL}:${REGISTRY_CLUSTER_PORT}/tech-companies-pipeline:${IMAGE_TAG}"
+
+  if [ ! -f "$cronjob" ]; then
+    warn "  cronjob.yaml not found at $cronjob — skipping update"
+    return 0
+  fi
+
+  info "  Updating image in $cronjob"
+  sed -i.bak -e "s|image: .*|image: ${full_image_ref}|" "$cronjob" && rm -f "${cronjob}.bak" || return 1
+}
+
 step_template() {
   step "4. Processing Kubernetes Templates"
 
   # Set PVC placeholders (empty by default, filled from .env)
+  PVC="${PVC:-false}"
   PVC_NAME="${PVC_NAME:-}"
   PVC_MOUNT_PATH="${PVC_MOUNT_PATH:-/data}"
   VOLUME_MOUNTS=""
   VOLUMES=""
-  if [ -n "$PVC_NAME" ]; then
+  if [ "$PVC" = "true" ] && [ -n "$PVC_NAME" ]; then
     VOLUME_MOUNTS="        volumeMounts:
         - name: ${PVC_NAME}
           mountPath: ${PVC_MOUNT_PATH}"
@@ -289,11 +333,14 @@ step_template() {
     local filename; filename=$(basename "$tmpl" .tmpl.yaml)
     local output="${app_dir}/k8s/${filename}.yaml"
     if [ -f "$output" ] && [ "$FORCE_OVERWRITE" = false ]; then
-      # For deploy.yaml, update only the image tag to preserve customizations
+      # For deploy.yaml, update the image tag and IMAGE_TAG env var to preserve customizations
       if [ "$filename" = "deploy" ]; then
         local full_image_ref="${REGISTRY_CLUSTER_URL}:${REGISTRY_CLUSTER_PORT}/${APP_NAME}:${IMAGE_TAG}"
-        info "  Updating image in existing ${app_dir}/k8s/${filename}.yaml"
-        sed "s|^\([[:space:]]*image:\).*|\1 ${full_image_ref}|" "$output" > "${output}.tmp" && mv "${output}.tmp" "$output" || return 1
+        info "  Updating image and IMAGE_TAG in existing ${app_dir}/k8s/${filename}.yaml"
+        awk -v ref="$full_image_ref" -v tag="$IMAGE_TAG" \
+          '/^[[:space:]]*image:/ { sub(/image:.*/, "image: " ref); print; next }
+           /name: IMAGE_TAG$/   { print; getline; sub(/value:.*/, "value: \"" tag "\""); print; next }
+           { print }' "$output" > "${output}.tmp" && mv "${output}.tmp" "$output" || return 1
       else
         info "  Skipping $(basename "$tmpl") -> $output (exists, use --force to overwrite)"
         continue
@@ -395,6 +442,13 @@ main() {
 
   run_step "Docker Build"     step_build
   run_step "Docker Tag/Push"  step_tag_push
+
+  # Pipeline (CronJob) image — only when CRONJOB=true
+  if [ "$CRONJOB" = "true" ]; then
+    run_step "Pipeline Docker Build"      step_build_pipeline
+    run_step "Pipeline Docker Tag/Push"   step_tag_push_pipeline
+    run_step "Pipeline CronJob Update"    step_update_cronjob
+  fi
 
   if [ "$SKIP_TEMPLATE" = true ]; then
     info "Skipping template generation (--skip-template)"

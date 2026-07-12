@@ -23,6 +23,9 @@ spec:
         - secretRef:
             name: ${APP_NAME}-env
             optional: true
+        env:
+        - name: IMAGE_TAG
+          value: "${IMAGE_TAG}"
         ports:
         - containerPort: ${CONTAINER_PORT}
 ${VOLUME_MOUNTS}
