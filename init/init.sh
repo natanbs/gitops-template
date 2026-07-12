@@ -290,8 +290,19 @@ fi
 if command -v kubectl &>/dev/null && kubectl cluster-info 2>/dev/null >/dev/null; then
   kubectl create namespace "$K8S_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f - >/dev/null
   info "Ensured namespace '$K8S_NAMESPACE' exists on cluster"
+
+  # ── Apply all k8s manifests ──────────────────────────────────
+  if [ -d "k8s" ]; then
+    info "Applying k8s manifests..."
+    for manifest in k8s/*.yaml; do
+      [ -f "$manifest" ] || continue
+      [[ "$manifest" == *.tmpl.yaml ]] && continue
+      info "  Applying: $(basename "$manifest")"
+      kubectl apply -f "$manifest" --namespace "$K8S_NAMESPACE" 2>/dev/null || warn "  Failed to apply $(basename "$manifest")"
+    done
+  fi
 else
-  warn "No cluster reachable — skipping namespace creation"
+  warn "No cluster reachable — skipping namespace creation and manifest application"
 fi
 
 # ── Run build if requested ──────────────────────────────────
