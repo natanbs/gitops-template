@@ -122,6 +122,7 @@ _PVC_SIZE=""
 _PVC_ACCESS_MODE=""
 _PVC_STORAGE_CLASS=""
 _INGRESS_CLASS=""
+_CRONJOB=""
 
 if [ -f .env ]; then
   _APP_NAME="$(       grep -s '^APP_NAME='       .env | sed 's/^APP_NAME=//'       || echo "$APP_NAME")"
@@ -137,6 +138,7 @@ if [ -f .env ]; then
   _PVC_ACCESS_MODE="$( grep -s '^PVC_ACCESS_MODE=' .env | sed 's/^PVC_ACCESS_MODE=//' || true)"
   _PVC_STORAGE_CLASS="$( grep -s '^PVC_STORAGE_CLASS=' .env | sed 's/^PVC_STORAGE_CLASS=//' || true)"
   _INGRESS_CLASS="$(  grep -s '^INGRESS_CLASS='  .env | sed 's/^INGRESS_CLASS=//'  || true)"
+  _CRONJOB="$(        grep -s '^CRONJOB='        .env | sed 's/^CRONJOB=//'        || true)"
 fi
 
 # CLI overrides take precedence
@@ -185,6 +187,9 @@ fi
 
 # Ingress class (defaults to traefik for k3d clusters)
 echo "INGRESS_CLASS=${_INGRESS_CLASS:-traefik}" >> .env
+
+# CronJob flag (preserved from existing .env)
+echo "CRONJOB=${_CRONJOB:-false}" >> .env
 
 info "Wrote .env"
 
