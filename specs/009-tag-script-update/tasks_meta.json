@@ -1,0 +1,136 @@
+{
+  "feature": "009-tag-script-update",
+  "created": "2026-07-13T22:39:13+03:00",
+  "tasks": {
+    "T001": {
+      "description": "Read and understand current tag.sh implementation",
+      "files": "tag.sh",
+      "execution_mode": "ASYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-13T22:43:11+03:00",
+      "completed_at": "2026-07-13T22:43:17+03:00",
+      "result_summary": "Read and understood tag.sh implementation"
+    },
+    "T002": {
+      "description": "Verify shellcheck is available for linting",
+      "files": "",
+      "execution_mode": "ASYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-13T22:43:28+03:00",
+      "completed_at": "2026-07-13T22:43:28+03:00",
+      "result_summary": "Shellcheck v0.11.0 available"
+    },
+    "T003": {
+      "description": "Add script path resolution using BASH_SOURCE",
+      "files": "tag.sh",
+      "execution_mode": "SYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-13T22:43:42+03:00",
+      "completed_at": "2026-07-13T22:44:00+03:00",
+      "result_summary": "Added SCRIPT_DIR resolution using BASH_SOURCE"
+    },
+    "T004": {
+      "description": "Change script arguments from image tag to just tag",
+      "files": "tag.sh",
+      "execution_mode": "ASYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-13T22:44:09+03:00",
+      "completed_at": "2026-07-13T22:44:20+03:00",
+      "result_summary": "Changed arguments from image tag to just tag"
+    },
+    "T005": {
+      "description": "Add IMAGE_NAME derivation using basename PWD",
+      "files": "tag.sh",
+      "execution_mode": "ASYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-13T22:44:32+03:00",
+      "completed_at": "2026-07-13T22:44:40+03:00",
+      "result_summary": "Added IMAGE_NAME derivation using basename PWD"
+    },
+    "T006": {
+      "description": "Reorder operations env update Docker push git tag",
+      "files": "tag.sh",
+      "execution_mode": "SYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-13T22:45:00+03:00",
+      "completed_at": "2026-07-13T22:45:22+03:00",
+      "result_summary": "Reordered operations to .env update then Docker push then git tag"
+    },
+    "T007": {
+      "description": "Add progress messages for each major step",
+      "files": "tag.sh",
+      "execution_mode": "ASYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-13T22:45:33+03:00",
+      "completed_at": "2026-07-13T22:46:05+03:00",
+      "result_summary": "Added step numbers to progress messages"
+    },
+    "T008": {
+      "description": "Update env update logic to skip gracefully when file does not exist",
+      "files": "tag.sh",
+      "execution_mode": "ASYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-13T22:46:16+03:00",
+      "completed_at": "2026-07-13T22:46:42+03:00",
+      "result_summary": "Added skip message when .env file does not exist"
+    },
+    "T009": {
+      "description": "Update Docker image existence check to use derived IMAGE_NAME",
+      "files": "tag.sh",
+      "execution_mode": "ASYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-13T22:47:06+03:00",
+      "completed_at": "2026-07-13T22:47:14+03:00",
+      "result_summary": "Docker image check already uses derived IMAGE_NAME from basename PWD"
+    },
+    "T010": {
+      "description": "Update git tag creation to use force-overwrite and hardcoded origin remote",
+      "files": "tag.sh",
+      "execution_mode": "ASYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-13T22:47:26+03:00",
+      "completed_at": "2026-07-13T22:47:35+03:00",
+      "result_summary": "Git tag already uses force-overwrite and hardcoded origin remote"
+    },
+    "T011": {
+      "description": "Run shellcheck on tag.sh and fix any warnings",
+      "files": "tag.sh",
+      "execution_mode": "ASYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-13T22:47:45+03:00",
+      "completed_at": "2026-07-13T22:48:13+03:00",
+      "result_summary": "Removed unused SCRIPT_DIR variable, shellcheck passes"
+    },
+    "T012": {
+      "description": "Update usage message to reflect new tag argument",
+      "files": "tag.sh",
+      "execution_mode": "ASYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-13T22:48:22+03:00",
+      "completed_at": "2026-07-13T22:48:31+03:00",
+      "result_summary": "Usage message already reflects new tag argument"
+    },
+    "T013": {
+      "description": "Test script execution from nested app folder",
+      "files": "tag.sh",
+      "execution_mode": "SYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-13T22:48:42+03:00",
+      "completed_at": "2026-07-13T22:49:05+03:00",
+      "result_summary": "Script works from nested folder with relative path"
+    }
+  }
+}
