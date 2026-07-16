@@ -1,0 +1,96 @@
+{
+  "feature": "011-init-default-appname",
+  "created": "2026-07-16T12:48:04+03:00",
+  "tasks": {
+    "T001": {
+      "description": "Add _APP_NAME_EXPLICIT flag and modify arg-parsing to make --app-name optional",
+      "files": "init/init.sh",
+      "execution_mode": "SYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-16T12:53:44+03:00",
+      "completed_at": "2026-07-16T12:54:56+03:00",
+      "result_summary": "Added _APP_NAME_EXPLICIT flag, made --app-name optional with folder name default"
+    },
+    "T002": {
+      "description": "Add K8s naming validation function in init/init.sh",
+      "files": "init/init.sh",
+      "execution_mode": "SYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": null,
+      "completed_at": "2026-07-16T12:54:56+03:00",
+      "result_summary": "Added validate_app_name() with K8s regex and length check"
+    },
+    "T003": {
+      "description": "Add blocklist check for repo-level names in init/init.sh",
+      "files": "init/init.sh",
+      "execution_mode": "SYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": null,
+      "completed_at": "2026-07-16T12:54:56+03:00",
+      "result_summary": "Added BLOCKED_NAMES array and blocklist check for default-only names"
+    },
+    "T004": {
+      "description": "Modify TARGET_DIR computation to branch on _APP_NAME_EXPLICIT",
+      "files": "init/init.sh",
+      "execution_mode": "SYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": null,
+      "completed_at": "2026-07-16T12:54:56+03:00",
+      "result_summary": "TARGET_DIR now branches on _APP_NAME_EXPLICIT flag"
+    },
+    "T005": {
+      "description": "Verify backward compatibility with explicit --app-name",
+      "files": "init/init.sh",
+      "execution_mode": "SYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-16T12:56:26+03:00",
+      "completed_at": "2026-07-16T12:57:46+03:00",
+      "result_summary": "Verified: default from folder, explicit override, K8s validation, blocklist, empty string, help text — all pass"
+    },
+    "T006": {
+      "description": "Update show_help function to reflect optional --app-name",
+      "files": "init/init.sh",
+      "execution_mode": "SYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-16T12:55:45+03:00",
+      "completed_at": "2026-07-16T12:56:11+03:00",
+      "result_summary": "Updated show_help: --app-name moved to Options with default note, added folder-name example"
+    },
+    "T007": {
+      "description": "Run ShellCheck and fix warnings",
+      "files": "init/init.sh",
+      "execution_mode": "ASYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-16T12:58:11+03:00",
+      "completed_at": "2026-07-16T12:58:24+03:00",
+      "result_summary": "ShellCheck clean — only pre-existing SC2034 warning (BUILD_STATUS unused)"
+    },
+    "T008": {
+      "description": "Create and run smoke test script",
+      "files": "specs/011-init-default-appname/smoke-test.sh",
+      "execution_mode": "ASYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-16T12:58:38+03:00",
+      "completed_at": "2026-07-16T13:03:40+03:00",
+      "result_summary": "Smoke test script created and passing — 16/16 tests (default, override, K8s validation, blocklist, empty string, help text)"
+    },
+    "T009": {
+      "description": "Run quickstart.md validation examples",
+      "files": "specs/011-init-default-appname/quickstart.md",
+      "execution_mode": "SYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-07-16T13:04:00+03:00",
+      "completed_at": "2026-07-16T13:04:28+03:00",
+      "result_summary": "Quickstart validated: default from folder ✓, K8s validation ✓, blocklist ✓. Explicit override pre-existing issue when run from /tmp (not our change)"
+    }
+  }
+}

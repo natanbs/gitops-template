@@ -7,17 +7,39 @@ info()  { printf "${GREEN}[INFO]${NC}  %s\n" "$*"; }
 warn()  { printf "${YELLOW}[WARN]${NC}  %s\n" "$*"; }
 error() { printf "${RED}[ERROR]${NC} %s\n" "$*"; }
 
+BLOCKED_NAMES=("gitops-template")
+
+validate_app_name() {
+  local name="$1"
+  local explicit="$2"
+  if [ "$explicit" = "false" ]; then
+    for blocked in "${BLOCKED_NAMES[@]}"; do
+      if [ "$name" = "$blocked" ]; then
+        error "App name \"$name\" is reserved. Use --app-name with a different name."
+        exit 1
+      fi
+    done
+  fi
+  if ! echo "$name" | grep -qE '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'; then
+    error "App name \"$name\" is not K8s-safe. Use lowercase letters, numbers, and hyphens only. Or provide --app-name explicitly."
+    exit 1
+  fi
+  if [ ${#name} -gt 253 ]; then
+    error "App name \"$name\" exceeds 253 characters."
+    exit 1
+  fi
+}
+
 show_help() {
   cat <<'EOF'
-Usage: init.sh --app-name APP_NAME [OPTIONS]
+Usage: init.sh [OPTIONS]
 
 Scaffold a new application. Creates the app directory with .env config
 and optionally a Dockerfile and source files. Optionally runs the build.
 
-Required:
-  --app-name NAME       Application name (k8s-safe: lowercase, hyphens only)
-
 Options:
+  --app-name NAME   Application name (k8s-safe: lowercase, hyphens only)
+                     (default: current folder name)
   --dockerfile TYPE    Scaffold a sample Dockerfile (go|python|node|none)
                        (default: none)
   --registry-url URL   Container registry hostname (default: localhost)
@@ -30,6 +52,7 @@ Options:
   --help               Show this help message
 
 Examples:
+  cd my-api && ../gitops-template/init.sh
   ./init.sh --app-name my-api
   ./init.sh --app-name my-api --dockerfile go
   ./init.sh --app-name my-api --build
@@ -50,6 +73,7 @@ RUN_DEPLOY=false
 
 # CLI overrides (empty = not provided)
 CLI_APP_NAME=""
+_APP_NAME_EXPLICIT=false
 CLI_REGISTRY_URL=""
 CLI_REGISTRY_PORT=""
 CLI_K8S_NAMESPACE=""
@@ -86,13 +110,24 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-# APP_NAME is required
-APP_NAME="$CLI_APP_NAME"
+# Derive APP_NAME: explicit --app-name takes precedence, else use folder name
+if [ -n "$CLI_APP_NAME" ]; then
+  _APP_NAME_EXPLICIT=true
+  APP_NAME="$CLI_APP_NAME"
+else
+  APP_NAME="$(basename "$PWD")"
+fi
+
+validate_app_name "$APP_NAME" "$_APP_NAME_EXPLICIT"
 if [ -n "$CLI_DOCKERFILE_TYPE" ]; then
   DOCKERFILE_TYPE="$CLI_DOCKERFILE_TYPE"
 fi
 
-TARGET_DIR="$(dirname "$PWD")/$APP_NAME"
+if [ "$_APP_NAME_EXPLICIT" = "true" ]; then
+  TARGET_DIR="$(dirname "$PWD")/$APP_NAME"
+else
+  TARGET_DIR="$PWD"
+fi
 _APP_EXISTS=false
 
 # ── Create app directory ────────────────────────────────────
