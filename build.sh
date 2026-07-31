@@ -4,6 +4,12 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="${SCRIPT_DIR}"
 
+# Shared port-sync helpers (svc/ingress). Missing lib falls back gracefully.
+if [ -f "$PROJECT_ROOT/init/lib/ports.sh" ]; then
+  # shellcheck source=/dev/null
+  . "$PROJECT_ROOT/init/lib/ports.sh"
+fi
+
 # ── Colour output ──────────────────────────────────────────────────
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[0;33m'; CYAN='\033[0;36m'; NC='\033[0m'
 info()  { printf "${GREEN}[INFO]${NC}  %s\n" "$*"; }
@@ -333,18 +339,46 @@ step_template() {
     local filename; filename=$(basename "$tmpl" .tmpl.yaml)
     local output="${app_dir}/k8s/${filename}.yaml"
     if [ -f "$output" ] && [ "$FORCE_OVERWRITE" = false ]; then
-      # For deploy.yaml, update the image tag and IMAGE_TAG env var to preserve customizations
-      if [ "$filename" = "deploy" ]; then
-        local full_image_ref="${REGISTRY_CLUSTER_URL}:${REGISTRY_CLUSTER_PORT}/${APP_NAME}:${IMAGE_TAG}"
-        info "  Updating image and IMAGE_TAG in existing ${app_dir}/k8s/${filename}.yaml"
-        awk -v ref="$full_image_ref" -v tag="$IMAGE_TAG" \
-          '/^[[:space:]]*image:/ { sub(/image:.*/, "image: " ref); print; next }
-           /name: IMAGE_TAG$/   { print; getline; sub(/value:.*/, "value: \"" tag "\""); print; next }
-           { print }' "$output" > "${output}.tmp" && mv "${output}.tmp" "$output" || return 1
-      else
-        info "  Skipping $(basename "$tmpl") -> $output (exists, use --force to overwrite)"
-        continue
-      fi
+      case "$filename" in
+        deploy)
+          # Preserve customizations in deploy.yaml: update image tag, IMAGE_TAG env var, and port fields
+          local full_image_ref="${REGISTRY_CLUSTER_URL}:${REGISTRY_CLUSTER_PORT}/${APP_NAME}:${IMAGE_TAG}"
+          info "  Updating image, IMAGE_TAG, and ports in existing ${app_dir}/k8s/${filename}.yaml"
+          awk -v ref="$full_image_ref" -v tag="$IMAGE_TAG" -v port="$CONTAINER_PORT" \
+            '/^[[:space:]]*image:/       { sub(/image:.*/, "image: " ref); print; next }
+             /name: IMAGE_TAG$/          { print; getline; sub(/value:.*/, "value: \"" tag "\""); print; next }
+             /^[[:space:]]*-[[:space:]]*containerPort:/ { sub(/containerPort:.*/, "containerPort: " port); print; next }
+             /^[[:space:]]*-[[:space:]]*port:/          { sub(/port:.*/, "port: " port); print; next }
+             /^[[:space:]]*port:/        { sub(/port:.*/, "port: " port); print; next }
+             { print }' "$output" > "${output}.tmp" && mv "${output}.tmp" "$output" || return 1
+          ;;
+        svc)
+          info "  Updating ports in existing ${app_dir}/k8s/${filename}.yaml"
+          if declare -f sync_svc_ports >/dev/null; then
+            sync_svc_ports "$output" "$CONTAINER_PORT" || return 1
+          else
+            sed -i.bak \
+              -e "s/^\([[:space:]]*port:\)[[:space:]]*[0-9]*/\1 ${CONTAINER_PORT}/" \
+              -e "s/^\([[:space:]]*-[[:space:]]*port:\)[[:space:]]*[0-9]*/\1 ${CONTAINER_PORT}/" \
+              -e "s/^\([[:space:]]*targetPort:\)[[:space:]]*[0-9]*/\1 ${CONTAINER_PORT}/" \
+              "$output" && rm -f "$output.bak" || return 1
+          fi
+          ;;
+        ingress)
+          info "  Updating backend port in existing ${app_dir}/k8s/${filename}.yaml"
+          if declare -f sync_ingress_number >/dev/null; then
+            sync_ingress_number "$output" "$CONTAINER_PORT" || return 1
+          else
+            sed -i.bak \
+              -e "s/^\([[:space:]]*number:\)[[:space:]]*[0-9]*/\1 ${CONTAINER_PORT}/" \
+              "$output" && rm -f "$output.bak" || return 1
+          fi
+          ;;
+        *)
+          info "  Skipping $(basename "$tmpl") -> $output (exists, use --force to overwrite)"
+          continue
+          ;;
+      esac
     else
       info "  Template: $(basename "$tmpl") -> ${app_dir}/k8s/${filename}.yaml"
       envsubst < "$tmpl" > "$output" || return 1

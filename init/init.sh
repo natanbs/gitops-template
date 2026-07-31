@@ -7,6 +7,9 @@ info()  { printf "${GREEN}[INFO]${NC}  %s\n" "$*"; }
 warn()  { printf "${YELLOW}[WARN]${NC}  %s\n" "$*"; }
 error() { printf "${RED}[ERROR]${NC} %s\n" "$*"; }
 
+# shellcheck source=/dev/null
+. "$SCRIPT_DIR/lib/ports.sh"
+
 BLOCKED_NAMES=("gitops-template")
 
 validate_app_name() {
@@ -183,6 +186,11 @@ fi
 [ -n "$CLI_K8S_NAMESPACE" ]     && _K8S_NS="$CLI_K8S_NAMESPACE"
 [ -n "$CLI_CONTAINER_PORT" ]    && _CONTAINER_PORT="$CLI_CONTAINER_PORT"
 
+# Normalize CONTAINER_PORT: empty or non-numeric would emit invalid YAML
+case "$_CONTAINER_PORT" in
+  ''|*[!0-9]*) _CONTAINER_PORT="$DEF_CONTAINER_PORT" ;;
+esac
+
 # Export merged values for build.sh / kubectl
 APP_NAME="$_APP_NAME"
 REGISTRY_URL="$_REGISTRY_URL"
@@ -244,6 +252,30 @@ fi
 _PVC_ACTIVE=false
 [ "$_PVC_NEW" = "true" ] && _PVC_ACTIVE=true
 
+# ── Sync CONTAINER_PORT into existing k8s manifests ────────────
+# Existing-app manifests are preserved (not re-rendered) to keep user
+# customizations. When --build/--deploy is requested, keep their port
+# fields in sync with CONTAINER_PORT from .env via targeted in-place edits.
+sync_container_port() {
+  local port="$1"
+
+  if [ -f "k8s/svc.yaml" ]; then
+    info "  Syncing port ${port} into k8s/svc.yaml"
+    sync_svc_ports k8s/svc.yaml "$port"
+  fi
+  if [ -f "k8s/deploy.yaml" ]; then
+    info "  Syncing port ${port} into k8s/deploy.yaml"
+    sed -i.bak \
+      -e "s/^\([[:space:]]*-[[:space:]]*containerPort:\)[[:space:]]*[0-9]*/\1 ${port}/" \
+      -e "s/^\([[:space:]]*port:\)[[:space:]]*[0-9]*/\1 ${port}/" \
+      k8s/deploy.yaml && rm -f k8s/deploy.yaml.bak
+  fi
+  if [ -f "k8s/ingress.yaml" ]; then
+    info "  Syncing port ${port} into k8s/ingress.yaml"
+    sync_ingress_number k8s/ingress.yaml "$port"
+  fi
+}
+
 # ── Render k8s templates ──────────────────────────────────────
 mkdir -p k8s argocd
 
@@ -293,6 +325,11 @@ if [ "$_APP_EXISTS" != true ]; then
     info "  Rendered: $output"
   done
   unset IMAGE_TAG
+fi
+
+# Keep existing manifests' ports in sync with CONTAINER_PORT when building/deploying
+if [ "$RUN_BUILD" = true ] && [ "$_APP_EXISTS" = true ]; then
+  sync_container_port "$_CONTAINER_PORT"
 fi
 
 # ── Write .gitignore ────────────────────────────────────────
