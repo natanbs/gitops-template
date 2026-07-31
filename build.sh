@@ -392,14 +392,7 @@ step_deploy() {
       [[ "$manifest" == *.tmpl.yaml ]] && continue
       [ -f "$manifest" ] || continue
       info "  Applying: $(basename "$manifest")"
-      local kind
-      kind=$(grep -E '^kind:' "$manifest" | head -1 | sed 's/^kind: *//')
-      if [ "$kind" = "Service" ]; then
-        kubectl delete -f "$manifest" --namespace "$K8S_NAMESPACE" --ignore-not-found 2>/dev/null
-        kubectl apply -f "$manifest" --namespace "$K8S_NAMESPACE" || return 1
-      else
-        kubectl apply -f "$manifest" --namespace "$K8S_NAMESPACE" || return 1
-      fi
+      kubectl apply -f "$manifest" --namespace "$K8S_NAMESPACE" || return 1
     done
   fi
 
