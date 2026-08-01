@@ -254,8 +254,8 @@ _PVC_ACTIVE=false
 
 # ── Sync CONTAINER_PORT into existing k8s manifests ────────────
 # Existing-app manifests are preserved (not re-rendered) to keep user
-# customizations. When --build/--deploy is requested, keep their port
-# fields in sync with CONTAINER_PORT from .env via targeted in-place edits.
+# customizations. Keep their port fields in sync with CONTAINER_PORT
+# from .env via targeted in-place edits so k8s config follows .env.
 sync_container_port() {
   local port="$1"
 
@@ -269,6 +269,24 @@ sync_container_port() {
       -e "s/^\([[:space:]]*-[[:space:]]*containerPort:\)[[:space:]]*[0-9]*/\1 ${port}/" \
       -e "s/^\([[:space:]]*port:\)[[:space:]]*[0-9]*/\1 ${port}/" \
       k8s/deploy.yaml && rm -f k8s/deploy.yaml.bak
+    # Ensure the app gets PORT=<container port> so it listens on the configured port
+    if grep -qE '^[[:space:]]*-[[:space:]]*name:[[:space:]]*PORT[[:space:]]*$' k8s/deploy.yaml; then
+      awk -v port="$port" '
+        /^[[:space:]]*-[[:space:]]*name:[[:space:]]*PORT[[:space:]]*$/ { print; getline; sub(/value:.*/, "value: \"" port "\""); print; next }
+        { print }
+      ' k8s/deploy.yaml > k8s/deploy.yaml.port && mv k8s/deploy.yaml.port k8s/deploy.yaml
+    else
+      awk -v port="$port" '
+        /^[[:space:]]*env:[[:space:]]*$/ && !done {
+          print
+          print "        - name: PORT"
+          print "          value: \"" port "\""
+          done = 1
+          next
+        }
+        { print }
+      ' k8s/deploy.yaml > k8s/deploy.yaml.port && mv k8s/deploy.yaml.port k8s/deploy.yaml
+    fi
   fi
   if [ -f "k8s/ingress.yaml" ]; then
     info "  Syncing port ${port} into k8s/ingress.yaml"
@@ -327,8 +345,8 @@ if [ "$_APP_EXISTS" != true ]; then
   unset IMAGE_TAG
 fi
 
-# Keep existing manifests' ports in sync with CONTAINER_PORT when building/deploying
-if [ "$RUN_BUILD" = true ] && [ "$_APP_EXISTS" = true ]; then
+# Keep existing manifests' ports in sync with CONTAINER_PORT from .env
+if [ "$_APP_EXISTS" = true ]; then
   sync_container_port "$_CONTAINER_PORT"
 fi
 
@@ -363,24 +381,11 @@ if [ ! -d .git ]; then
   info "Initialized git repository"
 fi
 
-# ── Ensure namespace exists ─────────────────────────────────
-if command -v kubectl &>/dev/null && kubectl cluster-info 2>/dev/null >/dev/null; then
-  kubectl create namespace "$K8S_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f - >/dev/null
-  info "Ensured namespace '$K8S_NAMESPACE' exists on cluster"
-
-  # ── Apply all k8s manifests ──────────────────────────────────
-  if [ -d "k8s" ]; then
-    info "Applying k8s manifests..."
-    for manifest in k8s/*.yaml; do
-      [ -f "$manifest" ] || continue
-      [[ "$manifest" == *.tmpl.yaml ]] && continue
-      info "  Applying: $(basename "$manifest")"
-      kubectl apply -f "$manifest" --namespace "$K8S_NAMESPACE" 2>/dev/null || warn "  Failed to apply $(basename "$manifest")"
-    done
-  fi
-else
-  warn "No cluster reachable — skipping namespace creation and manifest application"
-fi
+# ── GitOps: manifests are applied by ArgoCD from git ──────────
+# No kubectl commands are run here. Manifest changes are committed
+# to the app repository (see build.sh --auto-deploy) and synced by
+# ArgoCD, which also creates namespaces (CreateNamespace=true).
+info "GitOps: k8s manifests are applied by ArgoCD from git (no direct kubectl)"
 
 # ── Run build if requested ──────────────────────────────────
 _build_tag_arg() {

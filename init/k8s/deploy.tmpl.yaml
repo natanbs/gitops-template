@@ -26,6 +26,8 @@ spec:
         env:
         - name: IMAGE_TAG
           value: "${IMAGE_TAG}"
+        - name: PORT
+          value: "${CONTAINER_PORT}"
         ports:
         - containerPort: ${CONTAINER_PORT}
 ${VOLUME_MOUNTS}

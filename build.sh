@@ -102,7 +102,7 @@ Optional:
                         (default: $DEFAULT_TEMPLATE_REPO_RAW, path: init/k8s/)
   --app-repo-url URL    Git repository URL for ArgoCD Application template
                         (default: \$GIT_REPO_BASE/\$APP_NAME.git)
-  --auto-deploy         Apply generated manifests to the cluster via kubectl
+  --auto-deploy         Prepare generated manifests for GitOps deploy (commit/push manually)
   --continue-on-error   Continue pipeline even if a step fails
   --force               Overwrite existing K8s/ArgoCD manifest files
   --skip-template       Skip K8s/ArgoCD template generation
@@ -415,29 +415,23 @@ step_template() {
 }
 
 step_deploy() {
-  step "5. Applying Manifests to Cluster"
+  step "5. Preparing Manifests for GitOps Deploy"
 
   local app_dir
   app_dir="$(dirname "$PROJECT_ROOT")/$APP_NAME"
 
-  # Apply K8s manifests from the app's k8s/ directory
-  if [ -d "$app_dir/k8s" ]; then
-    for manifest in "$app_dir"/k8s/*.yaml; do
-      [[ "$manifest" == *.tmpl.yaml ]] && continue
-      [ -f "$manifest" ] || continue
-      info "  Applying: $(basename "$manifest")"
-      kubectl apply -f "$manifest" --namespace "$K8S_NAMESPACE" || return 1
-    done
-  fi
-
-  # Apply ArgoCD manifests from the app's argocd/ directory
-  if [ -n "$APP_REPO_URL" ] && [ -d "$app_dir/argocd" ]; then
-    for manifest in "$app_dir"/argocd/*.yaml; do
-      [[ "$manifest" == *.tmpl.yaml ]] && continue
-      [ -f "$manifest" ] || continue
-      info "  Applying: $(basename "$manifest")"
-      kubectl apply -f "$manifest" || return 1
-    done
+  if [ -d "$app_dir/.git" ]; then
+    local changed
+    changed=$(git -C "$app_dir" status --porcelain 2>/dev/null | grep -E 'k8s/|argocd/' || true)
+    if [ -n "$changed" ]; then
+      info "  Manifest changes ready (k8s/, argocd/)"
+      info "  Deploy via ArgoCD — commit and push manually:"
+      info "    git add k8s argocd && git commit -m \"Deploy $APP_NAME: image ${IMAGE_TAG}\" && git push"
+    else
+      info "  No manifest changes to commit"
+    fi
+  else
+    warn "  No git repository at $app_dir — commit the k8s/ changes manually to deploy"
   fi
 }
 
