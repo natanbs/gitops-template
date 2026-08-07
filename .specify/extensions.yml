@@ -4,16 +4,6 @@ installed:
 settings:
   auto_execute_hooks: true
 hooks:
-  before_constitution:
-  - extension: team-ai-directives
-    command: team.constitution
-    enabled: true
-    optional: false
-    priority: 10
-    prompt: Execute adlc.team-ai-directives.constitution?
-    description: Discover and inherit team constitution principles before project
-      constitution update
-    condition: null
   before_specify:
   - extension: team-ai-directives
     command: team.discover
@@ -21,7 +11,7 @@ hooks:
     optional: false
     priority: 10
     prompt: Execute adlc.team-ai-directives.discover?
-    description: Auto-discover personas, rules, and examples from team-ai-directives
+    description: Discover team context before specification
     condition: null
   before_plan:
   - extension: team-ai-directives
@@ -30,15 +20,5 @@ hooks:
     optional: false
     priority: 10
     prompt: Execute adlc.team-ai-directives.discover?
-    description: Auto-discover architecture patterns and implementation guidelines
-    condition: null
-  before_implement:
-  - extension: team-ai-directives
-    command: team.discover
-    enabled: true
-    optional: false
-    priority: 10
-    prompt: Execute adlc.team-ai-directives.discover?
-    description: Auto-discover team context before quick task execution (no-write
-      mode)
+    description: Discover team context before planning
     condition: null

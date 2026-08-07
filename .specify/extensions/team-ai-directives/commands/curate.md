@@ -1,7 +1,11 @@
 ---
-description: Scan execution traces and propose CDR drafts for team-ai-directives
+description: "Scan execution traces and propose new Context Directive Records (CDRs)"
+arguments: "--dry-run (optional, report only)"
 ---
 
+
+<!-- Extension: team-ai-directives -->
+<!-- Config: .specify/extensions/team-ai-directives/ -->
 ## Goal
 
 Scan `traces/` directory for execution trace files, analyze them for patterns, decisions, and conventions worth capturing, and propose Context Directive Records (CDRs) in `.specify/drafts/cdr.md`.
@@ -126,7 +130,7 @@ mkdir -p "{REPO_ROOT}/.specify/drafts"
 ### Phase 4: Output Summary
 
 ```markdown
-## Team Init Summary
+## Team Curate Summary
 
 | Metric | Value |
 |--------|-------|

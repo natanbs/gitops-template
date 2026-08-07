@@ -7,6 +7,8 @@ arguments: --no-write (optional, skip file persistence)
 
 <!-- Extension: team-ai-directives -->
 <!-- Config: .specify/extensions/team-ai-directives/ -->
+<!-- Extension: team-ai-directives -->
+<!-- Config: .specify/extensions/team-ai-directives/ -->
 ## Goal
 
 Discover relevant personas, rules, examples, and skills from team-ai-directives that apply to the current feature being specified or planned.
@@ -27,10 +29,24 @@ If `CDR.md` is missing or cannot be parsed, the command falls back to scanning `
 
 ### Step 1: Locate Knowledge Base
 
-Read `.specify/init-options.json` (JSON) and extract the `team_ai_directives` field.
+Read the file `.specify/init-options.json` directly. Do NOT use glob, find,
+or any file-search tool to locate it — search tools may silently skip
+dotfile-prefixed path segments. Read the file at the exact relative path
+`.specify/init-options.json` from the current working directory.
+
+If that read fails (file not found), walk up parent directories by reading
+`../.specify/init-options.json`, then `../../.specify/init-options.json`,
+and so on — up to 4 levels. Stop at the first successful read.
+
+From the JSON, extract the `team_ai_directives` field.
 
 - If present and the path exists: use it as the knowledge base root.
 - If not found or path doesn't exist: output empty results and exit.
+
+In subsequent steps, `{TEAM_AI_DIRECTIVES}` refers to this value, resolved
+as a path relative to the current working directory. Read files at this
+path directly — do NOT use glob, find, or any file-search tool to locate
+them.
 
 ### Step 2: Load Feature Context
 
@@ -38,6 +54,12 @@ Read the feature description from:
 - Environment variable: `${SPECIFY_FEATURE_DESCRIPTION}` (if set)
 - Context file: `{REPO_ROOT}/specs/${SPECIFY_FEATURE}/context.md`
 - Spec file: `{REPO_ROOT}/specs/${SPECIFY_FEATURE}/spec.md` (Mission Brief section)
+
+**Fallback for plain-message invocation**: If none of the above sources
+are available (no env var set, no feature directory, invoked as a skill
+from team-boot rather than a spec workflow hook), extract the feature
+context from the user's current message instead. The user's message is a
+valid feature description — use it directly.
 
 Extract the feature's:
 - **Domain**: What business area is this? (e.g., payments, auth, analytics)
@@ -82,7 +104,16 @@ For each candidate in the parsed CDR index, determine relevance based on:
 
 The **descriptor** column is the primary matching surface — it carries the condensed "when to use" summary authored during CDR publication. The **target module path** and **type** provide secondary matching signals.
 
-**Skills**: Match from `.skills.json` using description + categories (existing behavior, unchanged).
+**Skills**: Match from `.skills.json` against the feature context:
+- **Default skills** (the `default` list): Check each skill's description
+  against the feature's domain, technology, and patterns.
+- **External skills** (the `external` map): Check each entry's `description`
+  and `categories` fields against the feature's technology stack. Surface
+  any external skill whose categories overlap with the feature's technology
+  or patterns. For example, a React frontend feature should surface skills
+  with `frontend`, `react`, or `ui` categories.
+
+Include matched skills in the discovery output table with Type "Skill".
 
 ### Step 4b: Load Selected Module Bodies
 
@@ -105,6 +136,8 @@ Mode is detected in this order:
 2. If the environment variable `SPECIFY_FEATURE_DIRECTORY` is set: persist mode to feature dir.
 3. If run via `before_specify` hook (feature dir unknown): persist mode to staging path.
 4. If run via `before_implement` hook (Quick context): no-write mode.
+5. **If invoked as a skill** (no `$ARGUMENTS`, no env vars, no hook context):
+   no-write mode. Output the discovery table inline. Do not write any files.
 
 ### Step 5: Output Discovered Context
 

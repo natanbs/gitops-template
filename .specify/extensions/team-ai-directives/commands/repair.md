@@ -5,6 +5,9 @@ scripts:
   ps: .specify/extensions/team-ai-directives/scripts/powershell/setup-team.ps1 -Json
 ---
 
+
+<!-- Extension: team-ai-directives -->
+<!-- Config: .specify/extensions/team-ai-directives/ -->
 ## User Input
 
 ```text
@@ -70,7 +73,7 @@ You are acting as an **Index Repair Specialist** ensuring team-ai-directives ind
 
 **Objective**: Resolve paths and validate infrastructure
 
-Run `{SCRIPT}` from repository root and parse JSON output:
+Run `.specify/extensions/team-ai-directives/scripts/bash/setup-team.sh --json` from repository root and parse JSON output:
 
 ```json
 {
@@ -426,7 +429,7 @@ Context Directive Records (CDRs) track decisions about contributing context modu
 Rule
 
 ### Descriptor
-{One-line "when to use" summary derived from file content or frontmatter description. This becomes the search surface for the `adlc.team-ai-directives.discover` command.}
+{One-line "when to use" summary derived from file content or frontmatter description. This becomes the search surface for the `team.discover` command.}
 
 ### Evidence
 {From YAML frontmatter}

@@ -8,6 +8,8 @@ scripts:
 
 <!-- Extension: team-ai-directives -->
 <!-- Config: .specify/extensions/team-ai-directives/ -->
+<!-- Extension: team-ai-directives -->
+<!-- Config: .specify/extensions/team-ai-directives/ -->
 ## User Input
 
 ```text

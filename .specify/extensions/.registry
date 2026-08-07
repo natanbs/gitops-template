@@ -1,26 +1,6 @@
 {
   "schema_version": "1.0",
   "extensions": {
-    "team-ai-directives": {
-      "version": "3.2.0",
-      "source": "local",
-      "manifest_hash": "sha256:148f8a63d64a28556a4bd968bba81db3e94c5707c85330f8b00ea43b932b8ff2",
-      "enabled": true,
-      "priority": 1,
-      "registered_commands": {
-        "opencode": [
-          "team.verify",
-          "team.discover",
-          "team.constitution",
-          "team.skills",
-          "team.repair",
-          "team.init",
-          "team.evolve"
-        ]
-      },
-      "registered_skills": [],
-      "installed_at": "2026-07-06T10:20:56.546030+00:00"
-    },
     "levelup": {
       "version": "1.10.0",
       "source": "local",
@@ -39,6 +19,26 @@
       },
       "registered_skills": [],
       "installed_at": "2026-07-06T10:20:56.646249+00:00"
+    },
+    "team-ai-directives": {
+      "version": "4.3.3",
+      "source": "local",
+      "manifest_hash": "sha256:02a0c8b43defb639a9dc775f43dc2fabdad64b432f82e09321250230953c86f1",
+      "enabled": true,
+      "priority": 1,
+      "registered_commands": {
+        "opencode": [
+          "team.boot",
+          "team.discover",
+          "team.curate",
+          "team.evolve",
+          "team.repair",
+          "team.skills",
+          "team.verify"
+        ]
+      },
+      "registered_skills": [],
+      "installed_at": "2026-08-05T09:12:51.288459+00:00"
     }
   }
 }

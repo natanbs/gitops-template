@@ -1,7 +1,11 @@
 ---
-description: Apply regression-gated CDRs — review, validate, and implement context changes
+description: Apply regression-gated CDRs — review, validate, and implement context
+  changes
 ---
 
+
+<!-- Extension: team-ai-directives -->
+<!-- Config: .specify/extensions/team-ai-directives/ -->
 ## Goal
 
 Read proposed CDRs from `.specify/drafts/cdr.md`, run regression gate against existing team-ai-directives content and project evals, implement passing CDRs as file modifications, and output a results summary.
@@ -42,7 +46,7 @@ Read `{REPO_ROOT}/.specify/drafts/cdr.md` and list all CDRs with status "Propose
 If no proposed CDRs exist:
 
 ```
-No proposed CDRs found. Run /team.init to scan traces for patterns.
+No proposed CDRs found. Run /team.curate to scan traces for patterns.
 ```
 
 ### Phase 2: Regression Gate
@@ -198,6 +202,6 @@ Run **evals** (pytest / promptfoo) then create a PR:
 
 ## Related
 
-- `/team.init` — Create CDR proposals from traces
+- `/team.curate` — Create CDR proposals from traces
 - `/levelup.clarify` — Manual CDR refinement before implementation (in levelup extension)
 - `/levelup.skill` — Build skills from accepted CDRs (in levelup extension)

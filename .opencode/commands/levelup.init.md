@@ -312,7 +312,7 @@ Load state.json and check `progress.discovery`:
 
 #### Step 2: Run Discovery Agent
 
-Use template: `.specify/templates/subagents/discovery-prompt.md`
+Use template: `.specify/extensions/levelup/templates/subagents/discovery-prompt.md`
 
 **Input to Agent**:
 ```json
@@ -386,7 +386,7 @@ Load state.json and check `progress.pattern_analysis`:
 
 #### Step 2: Run Pattern Agent
 
-Use template: `.specify/templates/subagents/pattern-prompt.md`
+Use template: `.specify/extensions/levelup/templates/subagents/pattern-prompt.md`
 
 **Input to Agent**:
 ```json
@@ -466,7 +466,7 @@ Load from state.json:
 
 #### Step 2: Run Synthesis Agent
 
-Use template: `.specify/templates/subagents/synthesis-prompt.md`
+Use template: `.specify/extensions/levelup/templates/subagents/synthesis-prompt.md`
 
 **Agent Tasks**:
 
@@ -817,7 +817,7 @@ Append derived section to existing constitution.
 **CRITICAL**: Write to `.specify/drafts/cdr.md` (NOT to team-ai-directives).
 
 Append Constitution CDR to `{REPO_ROOT}/.specify/drafts/cdr.md`:
-- Use CDR template from `.specify/templates/cdr-template.md`
+- Use CDR template from `.specify/extensions/levelup/templates/cdr-template.md`
 - Set Status: "Discovered"
 - Set Context Type: "Constitution Creation" or "Constitution Amendment"
 - Include Constitution Strategy section
@@ -853,7 +853,7 @@ Append Constitution CDR to `{REPO_ROOT}/.specify/drafts/cdr.md`:
 
 **Note**: Constitution CDRs are created in Phase 8. This phase writes Rule, Persona, Example, Skill, and Inconsistency CDRs.
 
-For each generated CDR, use template from `.specify/templates/cdr-template.md` with:
+For each generated CDR, use template from `.specify/extensions/levelup/templates/cdr-template.md` with:
 - Cross-system metadata section
 - Inconsistency details (if applicable)
 - Team-directives comparison

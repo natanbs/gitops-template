@@ -5,6 +5,8 @@ description: Verify team-ai-directives installation and health check
 
 <!-- Extension: team-ai-directives -->
 <!-- Config: .specify/extensions/team-ai-directives/ -->
+<!-- Extension: team-ai-directives -->
+<!-- Config: .specify/extensions/team-ai-directives/ -->
 ## Goal
 
 Verify that team-ai-directives is properly installed and healthy.
