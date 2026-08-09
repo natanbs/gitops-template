@@ -5,6 +5,7 @@ description: Assess the codebase against spec, plan, and tasks; append remaining
 scripts:
   sh: .specify/scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks
   ps: .specify/scripts/powershell/check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks
+  py: .specify/scripts/python/check_prerequisites.py --json --require-tasks --include-tasks
 ---
 
 
@@ -13,10 +14,13 @@ scripts:
 
 **STOP. Before reading User Input or doing ANY other work, execute extension hooks.**
 
+**Skill Check**: Review the available skills listed in your system context. If any skill applies to this task, invoke it immediately via the skill tool and wait for its output before proceeding. This step enforces the "Strict Compliance" directive in AGENTS.md.
+
 0. Determine `{REPO_ROOT}` by running `git rev-parse --show-toplevel 2>/dev/null`. If that fails, walk up from the current directory until you find a `.git` directory or `.specify/init-options.json` and use that parent as `{REPO_ROOT}`.
 1. If `{REPO_ROOT}/.specify/extensions.yml` does not exist, state `No hooks file found` and skip to User Input.
+   If the YAML cannot be parsed or is invalid, skip hook checking silently and continue normally.
 2. Read `{REPO_ROOT}/.specify/extensions.yml` and find `hooks.before_converge`.
-3. Skip any hook with `enabled: false`. Skip any hook with a non-empty `condition`.
+3. Filter out hooks where `enabled` is explicitly `false`. Treat hooks without an `enabled` field as enabled by default. Skip any hook with a non-empty `condition` and leave condition evaluation to the HookExecutor implementation.
 4. For each remaining hook:
    - **Mandatory** (`optional: false`):
       ```
@@ -28,8 +32,19 @@ scripts:
 
       Wait for the result of the hook command before proceeding.
       ```
-      After emitting the block above you MUST actually invoke the hook and wait for it to finish before continuing. Run it the same way you would run the command yourself in this agent/session (the invocation may differ from the literal `{command}` id shown above, e.g. a skills-mode agent runs it as `/skill:speckit-...` or `$speckit-...`). Emitting the block alone does not run the hook.
-   - **Optional** (`optional: true`): Display the hook name, command, and description. Let the user decide.
+      After emitting the block above you MUST actually invoke the hook and wait for it to finish before continuing. Run it the same way you would run the command yourself in this agent/session (the invocation may differ from the literal `{command}` id shown above, e.g. a skills-mode agent runs it as `/skill:spec-...` or `$spec-...`). Emitting the block alone does not run the hook.
+   - **Optional** (`optional: true`):
+      ```
+      ## Extension Hooks
+
+      **Optional Hook**: {extension}
+      Command: `/{command}`
+      Description: {description}
+
+      Prompt: {prompt}
+      To execute: `/{command}`
+      ```
+      Let the user decide whether to execute the optional hook.
 5. State which hooks were executed, then proceed to User Input.
 
 ---
@@ -143,6 +158,13 @@ For each item in the intent inventory, inspect the current code in scope and pro
 - **`unrequested`**: the code contains work not called for by the spec, plan, or tasks
   (surfaced for awareness — converge does **not** delete code, it only appends a task to
   review/justify or remove it).
+
+**Scope constraint**: Only assess against requirements in the current feature's
+`spec.md`, `plan.md`, and `tasks.md`. Do **NOT** append tasks for pre-existing
+issues unrelated to the feature scope. If a pre-existing test fails or a
+pre-existing issue is found, note it in the risk register of `verify.md` but do
+**NOT** append it as a convergence task — it is out of scope. Only append tasks
+for gaps in requirements defined by this feature's artifacts.
 
 Each `Finding` records: a stable id, the `source-ref` it traces to, the `gap-type`, a
 severity, and a short human-readable description with the evidence (the file/area observed).
@@ -440,10 +462,21 @@ If any pillar score is below 70, append remediation tasks to `tasks.md` under a 
 - On `tasks_appended`: state how many tasks were appended under which phase, and recommend
   running `/spec.implement` to complete them; note that a follow-up converge
   run will find fewer or no remaining items.
-- On `converged`: report that the feature is fully converged and verified. No further
-  implement pass is needed for this feature's specified scope.
+- On `converged`: report **"✅ Converged — the implementation satisfies the spec, plan, and tasks."** and recommend proceeding to review / opening a PR. No further implement pass is needed for this feature's specified scope.
+
+## Done When
+
+- [ ] Convergence outcome determined (`converged` or `tasks_appended`)
+- [ ] When converged: test gate, diff analysis, 4-pillar assessment, and `verify.md` completed
+- [ ] Extension hooks dispatched or skipped according to the rules above
+- [ ] Completion reported to user with outcome and next actions
+
 
 ## Post-Execution Hooks
+
+**You MUST complete this section before reporting completion to the user.**
+
+Report the convergence outcome (`converged` or `tasks_appended`) in-session before listing any hooks, so users can decide whether to run optional follow-up commands.
 
 1. If `{REPO_ROOT}/.specify/extensions.yml` does not exist, skip silently.
 2. Read `hooks.after_converge`.
@@ -457,8 +490,19 @@ If any pillar score is below 70, append remediation tasks to `tasks.md` under a 
       Executing: `/{command}`
       EXECUTE_COMMAND: {command}
       ```
-      After emitting the block above you MUST actually invoke the hook and wait for it to finish before continuing. Run it the same way you would run the command yourself in this agent/session (the invocation may differ from the literal `{command}` id shown above, e.g. a skills-mode agent runs it as `/skill:speckit-...` or `$speckit-...`). Emitting the block alone does not run the hook.
-   - **Optional** (`optional: true`): Display hook info for user decision.
+      After emitting the block above you MUST actually invoke the hook and wait for it to finish before continuing. Run it the same way you would run the command yourself in this agent/session (the invocation may differ from the literal `{command}` id shown above, e.g. a skills-mode agent runs it as `/skill:spec-...` or `$spec-...`). Emitting the block alone does not run the hook.
+   - **Optional** (`optional: true`):
+      ```
+      ## Extension Hooks
+
+      **Optional Hook**: {extension}
+      Command: `/{command}`
+      Description: {description}
+
+      Prompt: {prompt}
+      To execute: `/{command}`
+      ```
+      Let the user decide whether to execute the optional hook.
 5. **Post-hook override**: After running all `after_converge` hooks, if any mandatory hook:
    - reported failures (exit code 1)
    - generated correction artifacts (`next-spec.md`)

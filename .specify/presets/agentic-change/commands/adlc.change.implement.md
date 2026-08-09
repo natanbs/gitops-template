@@ -1,22 +1,12 @@
 ---
 description: Execute tasks from a change proposal
 handoffs:
-  - label: Verify Change Completion
-    agent: adlc.change.verify
-    prompt: Verify the completed implementation against the change specification
+  - label: Converge Change Completion
+    agent: adlc.change.converge
+    prompt: Assess the completed implementation against the change specification
 scripts:
-  sh: |
-    for path in "$(pwd)/.specify/scripts/bash/common.sh" "$(dirname "$(pwd)")/scripts/bash/common.sh"; do
-        [[ -f "$path" ]] && source "$path" 2>/dev/null && break
-    done
-    REPO_ROOT=$(get_repo_root 2>/dev/null || git rev-parse --show-toplevel 2>/dev/null || pwd)
-    echo "REPO_ROOT='$REPO_ROOT'"
-  ps: |
-    $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-    $commonPath = Join-Path $scriptDir "..\..\..\scripts\powershell\common.ps1"
-    if (Test-Path $commonPath) { . $commonPath }
-    $repoRoot = Get-RepoRoot
-    "REPO_ROOT='$repoRoot'"
+  sh: scripts/bash/check-prerequisites.sh --json --paths-only
+  ps: scripts/powershell/check-prerequisites.ps1 -Json -PathsOnly
 ---
 
 ## MANDATORY: Pre-Execution Hooks
@@ -37,7 +27,7 @@ scripts:
 
       Wait for the result of the hook command before proceeding.
       ```
-      After emitting the block above you MUST actually invoke the hook and wait for it to finish before continuing. Run it the same way you would run the command yourself in this agent/session (the invocation may differ from the literal `{command}` id shown above, e.g. a skills-mode agent runs it as `/skill:speckit-...` or `$speckit-...`). Emitting the block alone does not run the hook.
+      After emitting the block above you MUST actually invoke the hook and wait for it to finish before continuing. Run it the same way you would run the command yourself in this agent/session (the invocation may differ from the literal `{command}` id shown above, e.g. a skills-mode agent runs it as `/skill:spec-...` or `$spec-...`). Emitting the block alone does not run the hook.
    - **Optional** (`optional: true`): Display the hook name, command, and description. Let the user decide.
 5. State which hooks were executed, then proceed to User Input.
 
@@ -57,11 +47,23 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 ### 1. Load Change Context
 
-Ask the user which change to implement (if not specified in arguments). Load the change directory:
-- `changes/{NNN-name}/spec.md` (required) — goal, requirements, delta description
-- `changes/{NNN-name}/plan.md` (if exists) — technical approach, decisions
-- `changes/{NNN-name}/tasks.md` (required) — task checklist
+Resolve the change directory in this order:
+
+1. If `$ARGUMENTS` explicitly names a change directory or number (e.g.,
+   `002-remove-login-modals` or `changes/002-remove-login-logout-modals`), use it.
+2. Otherwise, run `{SCRIPT}` from the repo root and parse `FEATURE_DIR`. This
+   reads `.specify/feature.json` (written by `__SPECKIT_COMMAND_CHANGE_SPECIFY__`) and points to
+   the current change directory. If `FEATURE_DIR` is under `changes/`, use it.
+3. If neither resolves to a valid change directory, ask the user.
+
+Once resolved, load:
+- `CHANGE_DIR/spec.md` (required) — goal, requirements, delta description
+- `CHANGE_DIR/plan.md` (if exists) — technical approach, decisions
+- `CHANGE_DIR/tasks.md` (required) — task checklist
 - **IF EXISTS**: Load `{REPO_ROOT}/.specify/memory/constitution.md` for project principles and governance constraints
+
+**CRITICAL - Path Validation**: Parse `FEATURE_DIR` from `{SCRIPT}` output; do
+not read from `./spec.md` or `./tasks.md` at the project root.
 
 ### 2. Execute Tasks
 
@@ -85,7 +87,7 @@ Tasks: 3/3 completed
 Files modified: {count}
 Change: changes/{NNN-name}/
 
-Next step: /change.verify
+Next step: /change.converge
 ```
 
 ---
@@ -104,6 +106,6 @@ Next step: /change.verify
       Executing: `/{command}`
       EXECUTE_COMMAND: {command}
       ```
-      After emitting the block above you MUST actually invoke the hook and wait for it to finish before continuing. Run it the same way you would run the command yourself in this agent/session (the invocation may differ from the literal `{command}` id shown above, e.g. a skills-mode agent runs it as `/skill:speckit-...` or `$speckit-...`). Emitting the block alone does not run the hook.
+      After emitting the block above you MUST actually invoke the hook and wait for it to finish before continuing. Run it the same way you would run the command yourself in this agent/session (the invocation may differ from the literal `{command}` id shown above, e.g. a skills-mode agent runs it as `/skill:spec-...` or `$spec-...`). Emitting the block alone does not run the hook.
    - **Optional** (`optional: true`): Display hook info for user decision.
 5. If no hooks registered, skip silently.

@@ -24,13 +24,14 @@ scripts:
 
 **Execute ONLY read-only discovery hooks.**
 
+**Skill Check**: Review the available skills listed in your system context. If any skill applies to this task, invoke it immediately via the skill tool and wait for its output before proceeding. This step enforces the "Strict Compliance" directive in AGENTS.md.
+
 0. Determine `{REPO_ROOT}` by running `git rev-parse --show-toplevel 2>/dev/null`. If that fails, walk up from the current directory until you find a `.git` directory or `.specify/init-options.json` and use that parent as `{REPO_ROOT}`.
 1. If `{REPO_ROOT}/.specify/extensions.yml` does not exist, state `No hooks file found` and skip to Mission Brief Extraction.
 2. Read `{REPO_ROOT}/.specify/extensions.yml` and find `hooks.before_specify`.
-3. Skip any hook with `enabled: false`. Skip any hook with a non-empty `condition`.
+3. Filter out hooks where `enabled` is explicitly `false`. Treat hooks without an `enabled` field as enabled by default. Skip any hook with a non-empty `condition` and leave condition evaluation to the HookExecutor implementation.
 4. **Classify each hook by mutation risk** (inspect the `{command}` name):
    - **Read-only / discovery hooks** (safe to run before Phase B):
-     - `team-ai-directives.discover`, `team-ai-directives.constitution`
      - `agent-context.update` (read-only refresh)
      - Any command whose name contains `discover`, `verify`, `validate` (when used for read-only context gathering)
    - **Mutating hooks** (MUST be deferred until after discovery hooks):
@@ -39,8 +40,29 @@ scripts:
      - `git.initialize` — initializes repositories
      - Any hook that modifies filesystem, Git state, or creates resources
 5. For each **read-only** hook:
-   - **Mandatory** (`optional: false`): Execute the command file's full instructions NOW before continuing.
-   - **Optional** (`optional: true`): Display the hook name, command, and description. Let the user decide.
+   - **Mandatory** (`optional: false`):
+      ```
+      ## Extension Hooks
+
+      **Automatic Pre-Hook**: {extension}
+      Executing: `/{command}`
+      EXECUTE_COMMAND: {command}
+
+      Wait for the result of the hook command before proceeding.
+      ```
+      After emitting the block above you MUST actually invoke the hook and wait for it to finish before continuing. Run it the same way you would run the command yourself in this agent/session (the invocation may differ from the literal `{command}` id shown above, e.g. a skills-mode agent runs it as `/skill:spec-...` or `$spec-...`). Emitting the block alone does not run the hook.
+   - **Optional** (`optional: true`):
+      ```
+      ## Extension Hooks
+
+      **Optional Hook**: {extension}
+      Command: `/{command}`
+      Description: {description}
+
+      Prompt: {prompt}
+      To execute: `/{command}`
+      ```
+      Let the user decide whether to execute the optional hook.
 6. For each **mutating** hook: do NOT execute yet. Note it for Phase B.
 7. State which discovery hooks were executed, then proceed to Mission Brief Extraction.
 
@@ -63,10 +85,11 @@ Before extracting from user input, check if `.specify/drafts/brainstorm-context.
 
 If user input ($ARGUMENTS) is substantial (10+ words) and no brainstorm draft was consumed, extract Goal, Success Criteria, and Constraints from it and populate them directly into the spec header fields.
 
-If minimal (< 10 words) or empty (and no brainstorm draft), derive a best-effort Goal from the generated short name. Leave Success Criteria and Constraints as template placeholders — they will be validated and finalized by `/spec.clarify`.
+If minimal (< 10 words) or empty (and no brainstorm draft), derive a best-effort Goal from the generated short name. **Always derive at least one checkable Success Criterion** from the goal — never leave it as a template placeholder. For example, if the goal is "add dark mode toggle", the criterion is "toggling dark mode persists across page reloads" or "dark mode CSS class is applied to the root element". Leave Constraints as placeholders only if truly unknown.
 
 ### Behavior
 - Always populate what you can from the available input.
+- **Never leave Success Criteria as "TBD" or template placeholders** — derive a checkable criterion from the goal.
 - Brainstorm draft content takes precedence over auto-extraction from $ARGUMENTS.
 - No confirmation prompt. Approval is deferred to `/spec.clarify`.
 - Proceed directly to Phase B after extraction.
@@ -76,7 +99,7 @@ If minimal (< 10 words) or empty (and no brainstorm draft), derive a best-effort
 ## Phase B: Mutating Hooks
 
 1. Before executing any deferred `git.feature` hook, inspect `.specify/extensions/git/git-config.yml`:
-   - If `branch_pattern.enabled: true` and `branch_pattern.template` contains `{issue}`, resolve an issue key before running the hook.
+   - If `branch_template` is configured and contains `{issue}`, resolve an issue key before running the hook.
    - Resolution order:
      1. Use explicit `GIT_BRANCH_ISSUE` if already provided.
       2. Otherwise extract an issue key from the user request or the extracted Mission Brief.
@@ -96,8 +119,19 @@ If minimal (< 10 words) or empty (and no brainstorm draft), derive a best-effort
 
       Wait for the result of the hook command before proceeding.
       ```
-      After emitting the block above you MUST actually invoke the hook and wait for it to finish before continuing. Run it the same way you would run the command yourself in this agent/session (the invocation may differ from the literal `{command}` id shown above, e.g. a skills-mode agent runs it as `/skill:speckit-...` or `$speckit-...`). Emitting the block alone does not run the hook.
-   - **Optional** (`optional: true`): Display the hook name, command, and description. Let the user decide.
+      After emitting the block above you MUST actually invoke the hook and wait for it to finish before continuing. Run it the same way you would run the command yourself in this agent/session (the invocation may differ from the literal `{command}` id shown above, e.g. a skills-mode agent runs it as `/skill:spec-...` or `$spec-...`). Emitting the block alone does not run the hook.
+   - **Optional** (`optional: true`):
+      ```
+      ## Extension Hooks
+
+      **Optional Hook**: {extension}
+      Command: `/{command}`
+      Description: {description}
+
+      Prompt: {prompt}
+      To execute: `/{command}`
+      ```
+      Let the user decide whether to execute the optional hook.
 3. State which mutating hooks were executed.
 4. If `git.feature` was executed and returned `BRANCH_NAME`/`FEATURE_NUM`, display:
    ```
@@ -121,10 +155,13 @@ Given that feature description, do this:
 1. **Generate a concise short name** (2-4 words) for the feature:
    - Analyze the feature description and extract the most meaningful keywords
    - Create a 2-4 word short name that captures the essence of the feature
+   - Keep it concise but descriptive enough to understand the feature at a glance
    - Use action-noun format when possible (e.g., "add-user-auth", "fix-payment-bug")
    - Preserve technical terms and acronyms (OAuth2, API, JWT, etc.)
    - Examples:
      - "I want to add user authentication" → "user-auth"
+     - "Create a dashboard for analytics" → "analytics-dashboard"
+     - "Fix payment processing timeout bug" → "fix-payment-timeout"
      - "Implement OAuth2 integration for the API" → "oauth2-api-integration"
 
 2. **Branch creation** (already completed in Phase B if `git.feature` hook was present):
@@ -141,11 +178,13 @@ Given that feature description, do this:
    **Resolution order for `SPECIFY_FEATURE_DIRECTORY`**:
    1. If the user explicitly provided `SPECIFY_FEATURE_DIRECTORY`, use it as-is
    2. Otherwise, auto-generate it under `specs/`:
-      - Check `.specify/init-options.json` for `branch_numbering`
-      - If `"timestamp"`: prefix is `YYYYMMDD-HHMMSS`
-      - If `"sequential"` or absent: prefix is `NNN` (next available 3-digit number)
-      - Construct: `<prefix>-<short-name>` (e.g., `003-user-auth`)
+      - Check `.specify/init-options.json` for `feature_numbering` (preferred)
+      - If `feature_numbering` is absent, fall back to `branch_numbering` (deprecated, migration only)
+      - If `"timestamp"`: prefix is `YYYYMMDD-HHMMSS` (current timestamp)
+      - If `"sequential"` or absent: prefix is `NNN` (next available 3-digit number after scanning existing directories in `specs/`)
+      - Construct: `<prefix>-<short-name>` (e.g., `20260319-143022-user-auth` or `003-user-auth`)
       - Set `SPECIFY_FEATURE_DIRECTORY` to `specs/<directory-name>`
+      - If `branch_numbering` was used, emit: "⚠️ `branch_numbering` in init-options.json is deprecated. Rename to `feature_numbering`."
 
    **Create the directory and spec file**:
    - `mkdir -p SPECIFY_FEATURE_DIRECTORY`
@@ -157,7 +196,8 @@ Given that feature description, do this:
        "feature_directory": "<resolved feature dir>"
      }
      ```
-     Write the actual resolved directory path, not the literal string `SPECIFY_FEATURE_DIRECTORY`.
+      Write the actual resolved directory path, not the literal string `SPECIFY_FEATURE_DIRECTORY`.
+      This allows downstream commands (`/spec.plan`, `/spec.tasks`, etc.) to locate the feature directory without relying on git branch name conventions.
 
    **IMPORTANT**:
    - You must only create one feature per `/spec.specify` invocation
@@ -170,9 +210,11 @@ Given that feature description, do this:
    2. Delete the draft: `rm .specify/drafts/brainstorm-context.md`
    3. State `Brainstorm context promoted to feature directory`
 
-5. Load `.specify/templates/spec-template.md` to understand required sections.
+5. **IF EXISTS**: Load `{REPO_ROOT}/.specify/memory/constitution.md` for project principles and governance constraints. Use these constraints when shaping scope, success criteria, and assumptions in the spec.
 
-6. Follow this execution flow:
+6. Load `.specify/templates/spec-template.md` to understand required sections.
+
+7. Follow this execution flow:
    1. Parse user description from arguments. If empty: ERROR "No feature description provided"
    2. Extract key concepts from description: actors, actions, data, constraints
    3. For unclear aspects:
@@ -189,14 +231,24 @@ Given that feature description, do this:
    7. Identify Key Entities (if data involved)
    8. Return: SUCCESS (spec ready for planning)
 
-7. Write the specification to SPEC_FILE using the template structure, replacing placeholders with concrete details derived from the feature description while preserving section order and headings.
+8. Write the specification to SPEC_FILE using the template structure, replacing placeholders with concrete details derived from the feature description while preserving section order and headings.
 
-8. **Specification Quality Validation**: After writing the initial spec, validate it against quality criteria:
+   **Post-write validation**: After writing `spec.md`, re-read it and verify the
+   Success Criteria section does not contain "TBD", "placeholder", or empty
+   content. If it does, derive a checkable criterion from the Goal and rewrite
+   the Success Criteria section before proceeding. Never leave Success Criteria
+   as "TBD".
+
+9. **Specification Quality Validation**: After writing the initial spec, validate it against quality criteria:
 
    a. **Create Spec Quality Checklist**: Generate a checklist file at `SPECIFY_FEATURE_DIRECTORY/checklists/requirements.md` using this structure:
 
       ```markdown
       # Specification Quality Checklist: [FEATURE NAME]
+
+      **Purpose**: Validate specification completeness and quality before proceeding to planning
+      **Created**: [DATE]
+      **Feature**: [Link to spec.md]
 
       ## Content Quality
       - [ ] No implementation details (languages, frameworks, APIs)
@@ -207,7 +259,8 @@ Given that feature description, do this:
       ## Requirement Completeness
       - [ ] No [NEEDS CLARIFICATION] markers remain
       - [ ] Requirements are testable and unambiguous
-      - [ ] Success criteria are measurable and technology-agnostic
+      - [ ] Success criteria are measurable
+      - [ ] Success criteria are technology-agnostic (no implementation details)
       - [ ] All acceptance scenarios are defined
       - [ ] Edge cases are identified
       - [ ] Scope is clearly bounded
@@ -218,6 +271,10 @@ Given that feature description, do this:
       - [ ] User scenarios cover primary flows
       - [ ] Feature meets measurable outcomes defined in Success Criteria
       - [ ] No implementation details leak into specification
+
+      ## Notes
+
+      - Items marked incomplete require spec updates before `/spec.clarify` or `/spec.plan`
       ```
 
    b. **Run Validation Check**: Review the spec against each checklist item. For each item, determine if it passes or fails. Document specific issues found (quote relevant spec sections).
@@ -247,10 +304,16 @@ Given that feature description, do this:
            | C | [Third answer] | [What this means] |
            | Custom | Provide your own | [How to provide input] |
 
-           **Your choice**: _[Wait for user response]_
-           ```
+            **Your choice**: _[Wait for user response]_
+            ```
 
-        4. Number questions sequentially (Q1, Q2, Q3 - max 3 total)
+            **CRITICAL - Table Formatting**: Ensure markdown tables are properly formatted:
+            - Use consistent spacing with pipes aligned
+            - Each cell should have spaces around content: `| Content |` not `|Content|`
+            - Header separator must have at least 3 dashes: `|--------|`
+            - Test that the table renders correctly in markdown preview
+
+         4. Number questions sequentially (Q1, Q2, Q3 - max 3 total)
         5. Present all questions together before waiting for responses
         6. Wait for user to respond with their choices for all questions
         7. Update the spec by replacing each [NEEDS CLARIFICATION] marker with the user's selected or provided answer
@@ -292,7 +355,7 @@ When creating this spec from a user prompt:
 4. **Prioritize clarifications**: scope > security/privacy > user experience > technical details
 5. **Think like a tester**: Every vague requirement should fail the "testable and unambiguous" checklist item
 6. **Common areas needing clarification** (only if no reasonable default exists):
-   - Feature scope and boundaries
+   - Feature scope and boundaries (include/exclude specific use cases)
    - User types and permissions (if multiple conflicting interpretations possible)
    - Security/compliance requirements (when legally/financially significant)
 
@@ -318,14 +381,25 @@ Success criteria must be:
 - "Users can complete checkout in under 3 minutes"
 - "System supports 10,000 concurrent users"
 - "95% of searches return results in under 1 second"
+- "Task completion rate improves by 40%"
 
 **Bad examples** (implementation-focused):
 
-- "API response time is under 200ms" (too technical)
-- "Database can handle 1000 TPS" (implementation detail)
+- "API response time is under 200ms" (too technical, use "Users see results instantly")
+- "Database can handle 1000 TPS" (implementation detail, use user-facing metric)
 - "React components render efficiently" (framework-specific)
+- "Redis cache hit rate above 80%" (technology-specific)
+
+## Done When
+
+- [ ] Specification written to `SPEC_FILE` and validated against the quality checklist
+- [ ] Extension hooks dispatched or skipped according to the rules above
+- [ ] Completion reported to user with feature directory, spec file path, and checklist results
+
 
 ## Post-Execution Hooks
+
+**You MUST complete this section before reporting completion to the user.**
 
 1. If `{REPO_ROOT}/.specify/extensions.yml` does not exist, skip silently.
 2. Read `hooks.after_specify`.
@@ -339,6 +413,17 @@ Success criteria must be:
       Executing: `/{command}`
       EXECUTE_COMMAND: {command}
       ```
-      After emitting the block above you MUST actually invoke the hook and wait for it to finish before continuing. Run it the same way you would run the command yourself in this agent/session (the invocation may differ from the literal `{command}` id shown above, e.g. a skills-mode agent runs it as `/skill:speckit-...` or `$speckit-...`). Emitting the block alone does not run the hook.
-   - **Optional** (`optional: true`): Display hook info for user decision.
+      After emitting the block above you MUST actually invoke the hook and wait for it to finish before continuing. Run it the same way you would run the command yourself in this agent/session (the invocation may differ from the literal `{command}` id shown above, e.g. a skills-mode agent runs it as `/skill:spec-...` or `$spec-...`). Emitting the block alone does not run the hook.
+   - **Optional** (`optional: true`):
+      ```
+      ## Extension Hooks
+
+      **Optional Hook**: {extension}
+      Command: `/{command}`
+      Description: {description}
+
+      Prompt: {prompt}
+      To execute: `/{command}`
+      ```
+      Let the user decide whether to execute the optional hook.
 5. If no hooks registered, skip silently.

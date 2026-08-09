@@ -46,6 +46,11 @@ Collect answers to:
 2. What defines success? (completion criteria)
 3. Any constraints? (time, priority, dependencies, tech limits)
 
+**Never accept "TBD" or empty for Success Criteria** — if the user provides
+vague criteria, derive a checkable one from the goal. For example, if the goal
+is "fix login redirect", the criterion is "login redirects to dashboard after
+auth, not back to login page".
+
 Display:
 
 ```markdown
@@ -66,6 +71,8 @@ Display:
 
 **STOP. Before reading User Input or doing ANY other work, execute extension hooks.**
 
+**Skill Check**: Review the available skills listed in your system context. If any skill applies to this task, invoke it immediately via the skill tool and wait for its output before proceeding. This step enforces the "Strict Compliance" directive in AGENTS.md.
+
 1. If `{REPO_ROOT}/.specify/extensions.yml` does not exist, state `No hooks file found` and skip to User Input.
 2. Read `{REPO_ROOT}/.specify/extensions.yml` and find `hooks.before_implement`.
 3. Skip any hook with `enabled: false`. Skip any hook with a non-empty `condition`.
@@ -80,7 +87,7 @@ Display:
 
       Wait for the result of the hook command before proceeding.
       ```
-      After emitting the block above you MUST actually invoke the hook and wait for it to finish before continuing. Run it the same way you would run the command yourself in this agent/session (the invocation may differ from the literal `{command}` id shown above, e.g. a skills-mode agent runs it as `/skill:speckit-...` or `$speckit-...`). Emitting the block alone does not run the hook.
+      After emitting the block above you MUST actually invoke the hook and wait for it to finish before continuing. Run it the same way you would run the command yourself in this agent/session (the invocation may differ from the literal `{command}` id shown above, e.g. a skills-mode agent runs it as `/skill:spec-...` or `$spec-...`). Emitting the block alone does not run the hook.
    - **Optional** (`optional: true`): Display the hook name, command, and description. Let the user decide.
 5. State which hooks were executed, then proceed to User Input.
 
@@ -173,7 +180,7 @@ Display summary:
       Executing: `/{command}`
       EXECUTE_COMMAND: {command}
       ```
-      After emitting the block above you MUST actually invoke the hook and wait for it to finish before continuing. Run it the same way you would run the command yourself in this agent/session (the invocation may differ from the literal `{command}` id shown above, e.g. a skills-mode agent runs it as `/skill:speckit-...` or `$speckit-...`). Emitting the block alone does not run the hook.
+      After emitting the block above you MUST actually invoke the hook and wait for it to finish before continuing. Run it the same way you would run the command yourself in this agent/session (the invocation may differ from the literal `{command}` id shown above, e.g. a skills-mode agent runs it as `/skill:spec-...` or `$spec-...`). Emitting the block alone does not run the hook.
    - **Optional** (`optional: true`): Display hook info for user decision.
      **STOP** — Wait for user decision before proceeding.
 5. If no hooks registered, skip silently.

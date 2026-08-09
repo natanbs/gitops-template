@@ -2,13 +2,9 @@
 description: Create a change proposal with specification, optional plan, and task
   breakdown
 handoffs:
-- label: Clarify Change Requirements
-  agent: spec.clarify
-  prompt: Clarify specification requirements for this change proposal
-  send: true
-- label: Validate Change Proposal
-  agent: spec.checklist
-  prompt: Validate the change specification against quality criteria
+- label: Implement Change
+  agent: change.implement
+  prompt: Execute the tasks from this change proposal
   send: true
 ---
 
@@ -24,7 +20,6 @@ handoffs:
 3. Skip any hook with `enabled: false`. Skip any hook with a non-empty `condition`.
 4. **Classify each hook by mutation risk** (inspect the `{command}` name):
    - **Read-only / discovery hooks** (safe to run before Phase B):
-     - `team-ai-directives.discover`, `team-ai-directives.constitution`
      - `agent-context.update` (read-only refresh)
      - Any command whose name contains `discover`, `verify`, `validate` (when used for read-only context gathering)
    - **Mutating hooks** (MUST be deferred until after Mission Brief):
@@ -33,7 +28,17 @@ handoffs:
      - `git.initialize` — initializes repositories
      - Any hook that modifies filesystem, Git state, or creates resources
 5. For each **read-only** hook:
-   - **Mandatory** (`optional: false`): Execute the command file's full instructions NOW before continuing.
+   - **Mandatory** (`optional: false`):
+      ```
+      ## Extension Hooks
+
+      **Automatic Pre-Hook**: {extension}
+      Executing: `/{command}`
+      EXECUTE_COMMAND: {command}
+
+      Wait for the result of the hook command before proceeding.
+      ```
+      After emitting the block above you MUST actually invoke the hook and wait for it to finish before continuing. Run it the same way you would run the command yourself in this agent/session (the invocation may differ from the literal `{command}` id shown above, e.g. a skills-mode agent runs it as `/skill:spec-...` or `$spec-...`). Emitting the block alone does not run the hook.
    - **Optional** (`optional: true`): Display the hook name, command, and description. Let the user decide.
 6. For each **mutating** hook: do NOT execute yet. Note it for Phase B.
 7. State which discovery hooks were executed, then proceed to Mission Brief Extraction.
@@ -46,10 +51,11 @@ handoffs:
 
 If user input ($ARGUMENTS) is substantial (10+ words), extract Goal, Success Criteria, and Constraints from it directly — no confirmation prompt.
 
-If minimal (< 10 words) or empty, derive a best-effort Goal from the change short name. Leave Success Criteria and Constraints as placeholders — they will be validated by the clarify handoff.
+If minimal (< 10 words) or empty, derive a best-effort Goal from the change short name. **Always derive at least one checkable Success Criterion** from the goal — never leave it as "TBD" or empty. For example, if the goal is "remove version modal", the criterion is "grep -r 'VersionModal' src/ returns 0 results" or "no imports of VersionModal exist in the codebase". Leave Constraints as placeholders only if truly unknown.
 
 ### Behavior
 - Always populate what you can from the available input.
+- **Never leave Success Criteria as "TBD" or empty** — derive a checkable criterion from the goal.
 - No confirmation prompt. Proceed directly to Phase B.
 
 ---
@@ -57,7 +63,7 @@ If minimal (< 10 words) or empty, derive a best-effort Goal from the change shor
 ## Phase B: Mutating Hooks
 
 1. Before executing any deferred `git.feature` hook, inspect `.specify/extensions/git/git-config.yml`:
-   - If `branch_pattern.enabled: true` and `branch_pattern.template` contains `{issue}`, resolve an issue key before running the hook.
+   - If `branch_template` is configured and contains `{issue}`, resolve an issue key before running the hook.
    - Resolution order:
      1. Use explicit `GIT_BRANCH_ISSUE` if already provided.
      2. Otherwise extract an issue key from the user request or the extracted Mission Brief.
@@ -77,23 +83,26 @@ If minimal (< 10 words) or empty, derive a best-effort Goal from the change shor
 
       Wait for the result of the hook command before proceeding.
       ```
-      After emitting the block above you MUST actually invoke the hook and wait for it to finish before continuing. Run it the same way you would run the command yourself in this agent/session (the invocation may differ from the literal `{command}` id shown above, e.g. a skills-mode agent runs it as `/skill:speckit-...` or `$speckit-...`). Emitting the block alone does not run the hook.
+      After emitting the block above you MUST actually invoke the hook and wait for it to finish before continuing. Run it the same way you would run the command yourself in this agent/session (the invocation may differ from the literal `{command}` id shown above, e.g. a skills-mode agent runs it as `/skill:spec-...` or `$spec-...`). Emitting the block alone does not run the hook.
    - **Optional** (`optional: true`): Display the hook name, command, and description. Let the user decide.
 3. State which mutating hooks were executed.
-4. If `git.feature` was executed and returned `BRANCH_NAME`/`FEATURE_NUM`, capture:
-   - `BRANCH_NAME` and `FEATURE_NUM` from its JSON output
-   - Persist to `.specify/feature.json`:
-     ```json
-     {
-       "feature_directory": "changes/<FEATURE_NUM>-<short-name>",
-       "feature_branch": "<BRANCH_NAME>",
-       "feature_num": "<FEATURE_NUM>"
-     }
-     ```
-   - Display:
-     ```
-     Branch created: {BRANCH_NAME} (Feature #{FEATURE_NUM})
-     ```
+  4. If `git.feature` was executed and returned `BRANCH_NAME`/`FEATURE_NUM`, capture:
+    - `BRANCH_NAME` and `FEATURE_NUM` from its JSON output
+    - Optionally record the branch metadata in `.specify/feature.json`:
+      ```json
+      {
+        "feature_directory": "changes/<FEATURE_NUM>-<short-name>",
+        "feature_branch": "<BRANCH_NAME>",
+        "feature_num": "<FEATURE_NUM>"
+      }
+      ```
+    - Display:
+      ```
+      Branch created: {BRANCH_NAME} (Feature #{FEATURE_NUM})
+      ```
+
+Note: the `feature_directory` pointer is already written unconditionally in
+Step 3, so `git.feature` only augments it with branch metadata.
 
 ---
 
@@ -122,7 +131,24 @@ If `changes/NNN-{name}/` already exists, warn the user and prompt for a differen
 
 Create: `changes/{NNN}-{name}/`
 
-### Step 3: Create Artifacts
+### Step 3: Persist Current Change Pointer
+
+Mirror `spec.specify`: after creating the change directory, persist the resolved
+path to `.specify/feature.json` so downstream commands (`change.implement`,
+`change.converge`) can auto-detect the current change without asking the user.
+
+Write `.specify/feature.json`:
+```json
+{
+  "feature_directory": "changes/<NNN>-<name>"
+}
+```
+
+Use the actual resolved path (e.g., `changes/002-remove-login-modals`), not a
+placeholder. This write is unconditional and does **not** depend on the git
+extension or `git.feature`.
+
+### Step 4: Create Artifacts
 
 **IF EXISTS**: Load `{REPO_ROOT}/.specify/memory/constitution.md`. If the constitution has no relevant principles for this change, note this in the risk register as a governance gap and proceed.
 
@@ -134,6 +160,13 @@ Create the following files in the change directory:
 - Delta description: What files/modules are ADDED, MODIFIED, or REMOVED
 - Risk Register: Any risks identified during scoping
 - Status: Draft  (lifecycle: Draft → Active → Implemented → Verified → Complete)
+
+**Post-write validation**: After writing `spec.md`, re-read it and verify the
+Success Criteria section does not contain "TBD", "placeholder", or empty
+content. If it does, derive a checkable criterion from the Goal and rewrite
+`spec.md` before proceeding. Never leave Success Criteria as "TBD".
+
+### Step 5: Report
 
 **plan.md** (optional — only when complexity warrants):
 Include a plan.md only if the change:
@@ -159,7 +192,7 @@ Implementation checklist with numbered checkboxes:
 
 Tasks should be small enough to complete in one session, ordered by dependency.
 
-### Step 4: Report
+### Step 5: Report
 
 ```
 Change created: changes/{NNN-name}/
@@ -188,7 +221,7 @@ Ready for implementation: /change.implement
       Executing: `/{command}`
       EXECUTE_COMMAND: {command}
       ```
-      After emitting the block above you MUST actually invoke the hook and wait for it to finish before continuing. Run it the same way you would run the command yourself in this agent/session (the invocation may differ from the literal `{command}` id shown above, e.g. a skills-mode agent runs it as `/skill:speckit-...` or `$speckit-...`). Emitting the block alone does not run the hook.
+      After emitting the block above you MUST actually invoke the hook and wait for it to finish before continuing. Run it the same way you would run the command yourself in this agent/session (the invocation may differ from the literal `{command}` id shown above, e.g. a skills-mode agent runs it as `/skill:spec-...` or `$spec-...`). Emitting the block alone does not run the hook.
    - **Optional** (`optional: true`): Display hook info for user decision.
      **STOP** — Wait for user decision before proceeding.
 5. If no hooks registered, skip silently.
