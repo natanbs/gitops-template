@@ -49,10 +49,10 @@
 - [x] T008 [SYNC] [US1] Implement profile-adaptive structure check in `standards-audit/checks/structure.sh` (required-file + YAML-parse per `app-k8s`|`app`|`library`; missing inputs for the profile emit `N/A`, never FAIL)
 - [x] T009 [SYNC] [US1] Implement offline git-tracked secret scan in `standards-audit/checks/secrets.sh` (pinned ruleset, BSD/GNU portable grep; `git ls-files` surface only)
 - [x] T010 [SYNC] [US1] Implement manifest-policy check in `standards-audit/checks/manifest-policy.sh` (.env best-effort authoritative port/PVC/tag/cronjob; cross-manifest internal-consistency fallback when `.env` absent)
-- [ ] T011 [SYNC] [US1] Add bats coverage in `standards-audit/tests/checks.bats` (conformant PASS, non-conformant FAIL, `app`-profile N/A; asserts `fix:` presence)
+- [x] T011 [SYNC] [US1] Add bats coverage in `standards-audit/tests/checks.bats` (conformant PASS, non-conformant FAIL, `app`-profile N/A; asserts `fix:` presence)
 - [x] T027 [P] [SYNC] [US1] Create `.env`-present conformant fixture in `standards-audit/fixtures/conformant-app-k8s-env/` (committed `.env` declaring port/PVC/image-tag/cronjob; `k8s/*.yaml` agree → `.env`-authoritative PASS, clarify Q4)
 - [x] T029 [P] [SYNC] [US1] Create minimal `library`-profile fixture in `standards-audit/fixtures/library/` (no Dockerfile/k8s/`.env`; structure run emits N/A/PASS, never FAIL)
-- [ ] T030 [SYNC] [US1] Extend `standards-audit/tests/checks.bats` for `.env`-present agreement (PASS), `.env` mismatch vs manifests (FAIL + `fix:`), no-`.env` fallback (PASS), and `library`-profile run (N/A/PASS, never FAIL; depends on T027/T029)
+- [x] T030 [SYNC] [US1] Extend `standards-audit/tests/checks.bats` for `.env`-present agreement (PASS), `.env` mismatch vs manifests (FAIL + `fix:`), no-`.env` fallback (PASS), and `library`-profile run (N/A/PASS, never FAIL; depends on T027/T029)
 
 **Checkpoint**: US1 complete — local audit is deterministic and offline; `bats standards-audit/tests/` green
 
