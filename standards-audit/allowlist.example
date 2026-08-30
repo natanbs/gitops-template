@@ -12,4 +12,4 @@
 #
 # Example — exclude a git-tracked fixture that intentionally plants a credential
 # pattern so the scan ruleset itself stays strict:
-# standards-audit/fixtures/non-conformant-app-k8s/secrets/.env.planted   # planted fixture credential
+# standards-audit/fixtures/non-conformant-app-k8s/secrets/planted.env   # planted fixture credential

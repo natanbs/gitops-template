@@ -78,9 +78,9 @@
 
 **Independent Test**: non-conformant fixture run shows every FAIL line ending in `fix: <remediation>` identifying the file; seeded secret remediated via `--allowlist` clears the check without editing the ruleset.
 
-- [ ] T015 [SYNC] [US3] Embed `fix:` remediation for every branch of `standards-audit/checks/structure.sh`, `secrets.sh`, `manifest-policy.sh` (depends on T008–T010)
-- [ ] T016 [SYNC] [US3] Add documented exemption/allowlist support in `standards-audit/checks/secrets.sh` + fill `standards-audit/allowlist.example` (depends on T009)
-- [ ] T017 [SYNC] [US3] Extend `standards-audit/tests/checks.bats` to assert `fix:` remediation and allowlist clearing (depends on T011)
+- [x] T015 [SYNC] [US3] Embed `fix:` remediation for every branch of `standards-audit/checks/structure.sh`, `secrets.sh`, `manifest-policy.sh` (depends on T008–T010)
+- [x] T016 [SYNC] [US3] Add documented exemption/allowlist support in `standards-audit/checks/secrets.sh` + fill `standards-audit/allowlist.example` (depends on T009)
+- [x] T017 [SYNC] [US3] Extend `standards-audit/tests/checks.bats` to assert `fix:` remediation and allowlist clearing (depends on T011)
 
 **Checkpoint**: US3 complete — Gate Ergonomics (Constitution II-2) satisfied; no FAIL line lacks a remedy
 

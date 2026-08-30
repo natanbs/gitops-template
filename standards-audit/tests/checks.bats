@@ -132,3 +132,54 @@ assert_has_no_fail() {
 
   rm -rf "$tmp"
 }
+
+# ── allowlist exemption (T016/T017) ───────────────────────────────
+
+pair_tmp=""
+setup_allowlist_pair() {
+  pair_tmp="$(mktemp -d)"
+  cp -R "$FIXTURES/non-conformant-app-k8s/." "$pair_tmp/"
+}
+
+teardown_allowlist_pair() {
+  rm -rf "$pair_tmp"
+}
+
+@test "allowlist substring pattern clears the secrets finding" {
+  setup_allowlist_pair
+  printf '%s\n' 'AKIAIOSFODNN7EXAMPLE   # planted fixture credential' > "$pair_tmp/allowlist.txt"
+
+  run "$RUNNER" --repo-root "$pair_tmp" --repo-profile app-k8s --allowlist "$pair_tmp/allowlist.txt"
+  [ "$status" -eq 1 ]
+  [[ "$output" != *"secrets-scan"* ]]
+  [[ "$output" == *"[FAIL]"* ]]           # structure + policy still fail
+  [[ "$output" == *"Dockerfile missing"* ]]
+  [[ "$output" == *"[PASS]	secrets-scan"* ]]
+  assert_fails_have_fix <<<"$output"
+  teardown_allowlist_pair
+}
+
+@test "allowlist path pattern (trailing # justification) clears the secrets finding" {
+  setup_allowlist_pair
+  printf '%s\n' 'standards-audit/fixtures/non-conformant-app-k8s/secrets/planted.env # planted fixture credential' > "$pair_tmp/allowlist.txt"
+
+  run "$RUNNER" --repo-root "$pair_tmp" --repo-profile app-k8s --allowlist "$pair_tmp/allowlist.txt"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"[PASS]	secrets-scan"* ]]
+  [[ "$output" != *"[FAIL]	secrets-scan"* ]]
+  assert_fails_have_fix <<<"$output"
+  teardown_allowlist_pair
+}
+
+@test "default allowlist at standards-audit/allowlist is auto-discovered" {
+  setup_allowlist_pair
+  mkdir -p "$pair_tmp/standards-audit"
+  printf '%s\n' 'AKIAIOSFODNN7EXAMPLE   # auto-discovered default' > "$pair_tmp/standards-audit/allowlist"
+
+  run "$RUNNER" --repo-root "$pair_tmp" --repo-profile app-k8s
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"[PASS]	secrets-scan"* ]]
+  [[ "$output" != *"[FAIL]	secrets-scan"* ]]
+  assert_fails_have_fix <<<"$output"
+  teardown_allowlist_pair
+}
