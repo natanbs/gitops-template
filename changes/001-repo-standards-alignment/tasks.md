@@ -64,9 +64,9 @@
 
 **Independent Test**: `standards-audit.yml` triggers on `workflow_call` with required `repo-profile` input; `examples/standards-audit-caller.yml` validates as YAML and references the tag/SHA-pinned workflow path.
 
-- [ ] T012 [SYNC] [US2] Implement reusable workflow in `.github/workflows/standards-audit.yml` (`workflow_call`, inputs `repo-profile`/`repo-root`, `permissions: contents: read`, SHA-pinned actions only)
-- [ ] T013 [P] [SYNC] [US2] Add documented opt-in caller example in `examples/standards-audit-caller.yml` (imports audit, passes `repo-profile`)
-- [ ] T014 [SYNC] [US2] Add workflow-contract bats in `standards-audit/tests/workflow.bats` (YAML parses; no unpinned action refs; `repo-profile` required)
+- [x] T012 [SYNC] [US2] Implement reusable workflow in `.github/workflows/standards-audit.yml` (`workflow_call`, inputs `repo-profile`/`repo-root`, `permissions: contents: read`, SHA-pinned actions only)
+- [x] T013 [P] [SYNC] [US2] Add documented opt-in caller example in `examples/standards-audit-caller.yml` (imports audit, passes `repo-profile`)
+- [x] T014 [SYNC] [US2] Add workflow-contract bats in `standards-audit/tests/workflow.bats` (YAML parses; no unpinned action refs; `repo-profile` required)
 
 **Checkpoint**: US2 complete — caller example + workflow contract verified
 

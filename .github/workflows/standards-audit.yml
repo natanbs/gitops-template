@@ -1,0 +1,50 @@
+name: Standards Audit (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      repo-profile:
+        type: string
+        required: true
+        description: "app-k8s | app | library"
+      repo-root:
+        type: string
+        required: false
+        default: "."
+        description: "path from the workspace root to the audited repository (default: the whole checkout)"
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # Check out the caller (audited) repository. fetch-depth: 0 mirrors the
+      # whole-repo, git-tracked surface the offline audit expects.
+      - name: Checkout audited repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Import the audit tooling from the repository that hosts THIS reusable
+      # workflow, at the exact ref the caller pinned (job.workflow_sha), so the
+      # audit and the workflow always stay in lockstep. No third-party action
+      # beyond checkout, which itself is SHA-pinned.
+      - name: Checkout standards-audit tooling
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: auditor
+          persist-credentials: false
+
+      # Exit codes: 0 PASS, 1 FAIL (a failing audit fails this job), 2 usage.
+      # Audit lines surface verbatim in the job log via runner stdout.
+      - name: Run standards audit
+        run: |
+          bash "$GITHUB_WORKSPACE/auditor/standards-audit/runner.sh" \
+            --repo-root "${{ inputs.repo-root }}" \
+            --repo-profile "${{ inputs.repo-profile }}"
