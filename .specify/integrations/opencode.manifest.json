@@ -1,7 +1,7 @@
 {
   "integration": "opencode",
   "version": "unknown",
-  "installed_at": "2026-08-30T09:10:28.518040+00:00",
+  "installed_at": "2026-08-30T10:13:13.130016+00:00",
   "files": {
     ".opencode/commands/spec.analyze.md": "ced129d734a5fedda1dcb3ba4f614c4cbde6491edf79e6b6990fdb02ef22441a",
     ".opencode/commands/spec.clarify.md": "cf396edf21704c7960e77bffa308a7ccc305aa996cf54ca61783eb2097b1ac21",
