@@ -5,9 +5,12 @@
 # * .env authoritative when present; manifests must agree with it.
 # * .env absent (CI checkout) -> cross-manifest internal consistency.
 # * port agreement is scoped to the app's serving surface (deploy/svc/ingress —
-#   the manifests build.sh renders from .env). Auxiliary workload ports
+#   the manifests build.sh renders from .env). Auxiliary workloads
 #   (e.g. a MinIO sidecar on 9000/9001) and policy rules (NetworkPolicy DNS)
 #   are their own concern and are never compared to CONTAINER_PORT.
+# * aux subsystems (<key>-deploy/-svc/-ingress.yaml) are still validated for
+#   internal port coherence: svc targetPort must be exposed by its deployment,
+#   ingress backends must be served by its service.
 # * raw source templates (*.tmpl.yaml) are excluded from the manifest surface —
 #   placeholders like ${K8S_NAMESPACE} are not values.
 # * non-app-k8s profiles or absent k8s/ -> N/A, never FAIL.
@@ -89,6 +92,46 @@ env_value() { # <file> <KEY> -> value from a name=value .env
 fail_violation() { # <detail> <fix>
   printf '[FAIL]\t%s\t%s\tfix: %s\n' "$check_id" "$1" "$2"
   exit 1
+}
+
+container_ports_in() { # <file> -> distinct numeric containerPort values declared by a workload
+  awk '
+    /^[[:space:]]*-?[[:space:]]*containerPort:[[:space:]]*[0-9]+/ {
+      v = $0
+      sub(/^[^0-9]*/, "", v)
+      sub(/[[:space:]]*$/, "", v)
+      print v
+    }' "$1" | sort -n | uniq
+}
+
+service_target_ports() { # <file> -> numeric targetPort values, or port when empty
+  awk '
+    /^[[:space:]]*-?[[:space:]]*targetPort:[[:space:]]*[0-9]+/ {
+      v = $0
+      sub(/^[^0-9]*/, "", v)
+      sub(/[[:space:]]*$/, "", v)
+      tp = tp "\n" v
+      has_tp = 1
+      next
+    }
+    /^[[:space:]]*-?[[:space:]]*port:[[:space:]]*[0-9]+/ {
+      v = $0
+      sub(/^[^0-9]*/, "", v)
+      sub(/[[:space:]]*$/, "", v)
+      p = p "\n" v
+      next
+    }
+    END { print (has_tp ? tp : p) }' "$1" | grep -E '^[0-9]+$'
+}
+
+ingress_backend_ports() { # <file> -> distinct numeric backend service.port.number values
+  awk '
+    /^[[:space:]]*-?[[:space:]]*number:[[:space:]]*[0-9]+/ {
+      v = $0
+      sub(/^[^0-9]*/, "", v)
+      sub(/[[:space:]]*$/, "", v)
+      print v
+    }' "$1" | sort -n | uniq
 }
 
 # --- value-level extraction ---------------------------------------------------
@@ -200,6 +243,42 @@ else
     fail_violation "k8s/ manifests disagree on image reference ($values)" "use one image reference across manifests"
   fi
 fi
+
+# --- aux-workload subsystem coherence ---------------------------------------
+# Sidecar/aux subsystems (<key>-deploy/-svc/-ingress.yaml, e.g. minio-*) are
+# exempt from the CONTAINER_PORT binding (they serve their own ports) but must
+# still be internally coherent: every service targetPort must be exposed by the
+# matching deployment, and every ingress backend number must be served by the
+# matching service. Runs in both authoritative and fallback modes.
+while IFS= read -r m; do
+  [[ "$m" == *-deploy.yaml ]] || continue
+  key="${m%-deploy.yaml}"
+  deploy_file="$repo_root/k8s/$key-deploy.yaml"
+  svc_file="$repo_root/k8s/$key-svc.yaml"
+  ingress_file="$repo_root/k8s/$key-ingress.yaml"
+  [[ -f "$deploy_file" ]] || continue
+
+  container_ports="$(container_ports_in "$deploy_file")"
+  if [[ -f "$svc_file" ]]; then
+    while IFS= read -r t; do
+      [[ -n "$t" ]] || continue
+      if ! grep -Fxq "$t" <<<"$container_ports"; then
+        exposed="$(printf '%s' "$container_ports" | tr '\n' ' ')"
+        fail_violation "k8s/$key-svc.yaml targetPort $t is not exposed by k8s/$key-deploy.yaml (containerPorts: $exposed)" "set $key-svc.yaml targetPort to one of the containerPorts exposed by $key-deploy.yaml"
+      fi
+    done < <(service_target_ports "$svc_file")
+  fi
+  if [[ -f "$svc_file" && -f "$ingress_file" ]]; then
+    svc_ports="$(service_target_ports "$svc_file")"
+    while IFS= read -r n; do
+      [[ -n "$n" ]] || continue
+      if ! grep -Fxq "$n" <<<"$svc_ports"; then
+        served="$(printf '%s' "$svc_ports" | tr '\n' ' ')"
+        fail_violation "k8s/$key-ingress.yaml backend number $n is not served by k8s/$key-svc.yaml (published via $key-svc.yaml: $served)" "set $key-ingress.yaml backend number to a port served by $key-svc.yaml"
+      fi
+    done < <(ingress_backend_ports "$ingress_file")
+  fi
+done <<<"$manifests"
 
 printf '[PASS]\t%s\tk8s/ manifests agree with declared config (or are internally consistent)\n' "$check_id"
 exit 0
