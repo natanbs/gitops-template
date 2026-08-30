@@ -360,3 +360,71 @@ YAML
   [[ "$output" != *"disagrees with CONTAINER_PORT"* ]]
   rm -rf "$tmp"
 }
+
+@test "policy-manifests: auxiliary MinIO sidecar ports are not CONTAINER_PORT-bound" {
+  tmp="$(mktemp -d)"
+  touch "$tmp/Dockerfile"
+  printf 'CONTAINER_PORT=7020\nK8S_NAMESPACE=apps-ns\n' > "$tmp/.env"
+  mkdir -p "$tmp/k8s"
+  cat > "$tmp/k8s/deploy.yaml" <<'YAML'
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: svc
+  namespace: apps-ns
+spec:
+  template:
+    spec:
+      containers:
+        - name: svc
+          image: registry/svc:1.0.0
+          ports:
+            - containerPort: 7020
+YAML
+  cat > "$tmp/k8s/svc.yaml" <<'YAML'
+apiVersion: v1
+kind: Service
+metadata:
+  name: svc
+  namespace: apps-ns
+spec:
+  selector:
+    app: svc
+  ports:
+    - port: 7020
+      targetPort: 7020
+      protocol: TCP
+YAML
+  cat > "$tmp/k8s/minio-deploy.yaml" <<'YAML'
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: svc-minio
+  namespace: apps-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: svc-minio
+  template:
+    metadata:
+      labels:
+        app: svc-minio
+    spec:
+      containers:
+        - name: minio
+          image: minio/minio:latest
+          command: ["minio", "server", "/data", "--console-address", ":9001"]
+          ports:
+            - containerPort: 9000
+              name: s3
+            - containerPort: 9001
+              name: console
+YAML
+
+  run "$RUNNER" --repo-root "$tmp" --repo-profile app-k8s
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"AUDIT RESULT: PASS"* ]]
+  [[ "$output" != *"disagrees with CONTAINER_PORT"* ]]
+  rm -rf "$tmp"
+}

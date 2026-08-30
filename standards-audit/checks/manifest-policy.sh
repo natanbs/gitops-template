@@ -4,6 +4,10 @@
 #   non-overlapping with structure (structure owns FORMAT parse).
 # * .env authoritative when present; manifests must agree with it.
 # * .env absent (CI checkout) -> cross-manifest internal consistency.
+# * port agreement is scoped to the app's serving surface (deploy/svc/ingress —
+#   the manifests build.sh renders from .env). Auxiliary workload ports
+#   (e.g. a MinIO sidecar on 9000/9001) and policy rules (NetworkPolicy DNS)
+#   are their own concern and are never compared to CONTAINER_PORT.
 # * raw source templates (*.tmpl.yaml) are excluded from the manifest surface —
 #   placeholders like ${K8S_NAMESPACE} are not values.
 # * non-app-k8s profiles or absent k8s/ -> N/A, never FAIL.
@@ -34,6 +38,11 @@ if [[ -z "$manifests" ]]; then
   printf '[N/A]\t%s\tno k8s/ manifests for profile '\''%s'\''\n' "$check_id" "$profile"
   exit 0
 fi
+
+# App serving surface: the manifests whose network ports must equal
+# CONTAINER_PORT. Auxiliary workloads (minio-*, redis-*, sidecars) and policy
+# objects (NetworkPolicy) run on their own ports and are excluded.
+app_surface="deploy.yaml"$'\n'"svc.yaml"$'\n'"ingress.yaml"
 
 # --- helpers (grep/awk only, BSD+GNU portable) --------------------------------
 yaml_scalar() { # <file> <key-regex> -> first key value (quotes stripped, inner spaces kept)
@@ -105,7 +114,7 @@ if [[ -n "$env_file" ]]; then
           fail_violation "k8s/$m port $v disagrees with CONTAINER_PORT=$expected_port (from .env)" "align k8s/$m ports to CONTAINER_PORT=$expected_port (or regenerate with build.sh)"
         fi
       done < <(ports_in "$file")
-    done <<<"$manifests"
+    done <<<"$app_surface"
   fi
 
   expected_ns="$(env_value "$env_file" K8S_NAMESPACE)"
@@ -159,6 +168,11 @@ else
       [[ -n "$v" ]] || continue
       port_set="${port_set}${port_set:+$'\n'}${v}"
     done < <(ports_in "$file")
+  done <<<"$app_surface"
+  while IFS= read -r m; do
+    [[ -n "$m" ]] || continue
+    file="$repo_root/k8s/$m"
+    [[ -f "$file" ]] || continue
     ns="$(yaml_scalar "$file" '^[[:space:]]*namespace:[[:space:]]*[^[:space:]]+')"
     if [[ -n "$ns" ]]; then
       ns_set="${ns_set}${ns_set:+$'\n'}${ns}"
