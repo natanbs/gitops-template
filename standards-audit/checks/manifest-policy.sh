@@ -48,9 +48,24 @@ yaml_scalar() { # <file> <key-regex> -> first key value (quotes stripped, inner 
     }' "$1"
 }
 
-ports_in() { # <file> -> distinct numeric port-ish values, one per line
+ports_in() { # <file> -> distinct container-app port-ish values, one per line
+  # Only resources that own application container ports are scanned. Network
+  # policy rules (NetworkPolicy, egress/ingress DNS) carry non-app ports like 53
+  # and must never be compared against CONTAINER_PORT.
   awk '
+    /^[[:space:]]*kind:[[:space:]]*[^[:space:]]+/ {
+      v = $0
+      sub(/^[^:]*:[[:space:]]*/, "", v)
+      sub(/[[:space:]]+#.*$/, "", v)
+      sub(/[[:space:]]+$/, "", v)
+      kind = v
+      next
+    }
+    /^---/ { kind = ""; next }
     /^[[:space:]]*-?[[:space:]]*(containerPort|targetPort|port|number):[[:space:]]*[0-9]+/ {
+      if (kind != "Deployment" && kind != "StatefulSet" && kind != "DaemonSet" && \
+          kind != "ReplicaSet" && kind != "Pod" && kind != "Service" && \
+          kind != "Ingress" && kind != "CronJob") next
       v = $0
       sub(/^[^0-9]*/, "", v)
       sub(/[[:space:]]*$/, "", v)

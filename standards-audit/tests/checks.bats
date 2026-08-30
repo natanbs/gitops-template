@@ -249,3 +249,114 @@ teardown_allowlist_pair() {
   assert_has_no_fail
   rm -rf "$tmp"
 }
+
+# ── real-world ConfigMap/NetworkPolicy content must not false-fail ──
+
+@test "structure-files: block-scalar configmap data (config.toml: |) parses cleanly" {
+  tmp="$(mktemp -d)"
+  touch "$tmp/Dockerfile"
+  printf 'CONTAINER_PORT=8888\nK8S_NAMESPACE=apps-ns\n' > "$tmp/.env"
+  mkdir -p "$tmp/k8s"
+  cat > "$tmp/k8s/deploy.yaml" <<'YAML'
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: svc
+  namespace: apps-ns
+spec:
+  template:
+    spec:
+      containers:
+        - name: svc
+          image: registry/svc:1.0.0
+          ports:
+            - containerPort: 8888
+YAML
+  cat > "$tmp/k8s/configmap.yaml" <<'YAML'
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: svc-config
+  namespace: apps-ns
+data:
+  config.toml: |
+    [auth]
+    id = "028873800"
+    [scrape]
+    min_report_year = 2025
+    nested: still-a-value-line
+YAML
+
+  run "$RUNNER" --repo-root "$tmp" --repo-profile app-k8s
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"AUDIT RESULT: PASS"* ]]
+  [[ "$output" != *"unexpected line"* ]]
+  rm -rf "$tmp"
+}
+
+@test "policy-manifests: NetworkPolicy DNS/proxy ports never compared to CONTAINER_PORT" {
+  tmp="$(mktemp -d)"
+  touch "$tmp/Dockerfile"
+  printf 'CONTAINER_PORT=8888\nK8S_NAMESPACE=apps-ns\n' > "$tmp/.env"
+  mkdir -p "$tmp/k8s"
+  cat > "$tmp/k8s/deploy.yaml" <<'YAML'
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: svc
+  namespace: apps-ns
+spec:
+  template:
+    spec:
+      containers:
+        - name: svc
+          image: registry/svc:1.0.0
+          ports:
+            - containerPort: 8888
+YAML
+  cat > "$tmp/k8s/networkpolicy.yaml" <<'YAML'
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: svc-np
+  namespace: apps-ns
+spec:
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - ports:
+    - port: 8888
+      protocol: TCP
+  egress:
+  - ports:
+    - port: 53
+      protocol: UDP
+    - port: 53
+      protocol: TCP
+    - port: 443
+      protocol: TCP
+    to:
+    - namespaceSelector: {}
+YAML
+  cat > "$tmp/k8s/svc.yaml" <<'YAML'
+apiVersion: v1
+kind: Service
+metadata:
+  name: svc
+  namespace: apps-ns
+spec:
+  selector:
+    app: svc
+  ports:
+    - port: 8888
+      targetPort: 8888
+      protocol: TCP
+YAML
+
+  run "$RUNNER" --repo-root "$tmp" --repo-profile app-k8s
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"AUDIT RESULT: PASS"* ]]
+  [[ "$output" != *"disagrees with CONTAINER_PORT"* ]]
+  rm -rf "$tmp"
+}

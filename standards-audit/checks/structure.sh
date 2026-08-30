@@ -76,9 +76,13 @@ yaml_problem() {
       if (bad != "") next
       if ($0 ~ /^[[:space:]]*\t/) { bad = sprintf("tab character in indentation (line %d)", line); next }
       if ($0 ~ /^[[:space:]]*-/ || $0 ~ /^[[:space:]]*#/ || $0 ~ /^[[:space:]]*$/) next
-      if ($0 ~ /^[[:space:]]*[A-Za-z0-9_.-]+:[[:space:]]*/) {
+      indent = 0; while (substr($0, indent + 1, 1) == " ") indent++
+      if (block_indent != "" && indent >= block_indent) next
+      if (block_indent != "") block_indent = ""
+      if ($0 ~ /^[[:space:]]*[^[:space:]:]+:[[:space:]]*/) {
         if ($0 ~ /^[[:space:]]*kind:/ || $0 ~ /kind:[[:space:]]*$/) { kind = 1 }
         if ($0 ~ /^[[:space:]]*apiVersion:/) { api = 1 }
+        if ($0 ~ /:[[:space:]]*[|>][+-]?[[:space:]]*$/) { block_indent = indent + 1 }
         next
       }
       bad = "unexpected line " line ": " $0
