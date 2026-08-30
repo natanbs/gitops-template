@@ -92,9 +92,9 @@
 
 **Independent Test**: scaffolding a fresh fixture app produces a committed `.template-version` file whose content equals `init/template-version`; re-running `init.sh` is idempotent.
 
-- [ ] T018 [SYNC] [US4] Stamp `.template-version` into scaffolded apps in `init/init.sh` (read canonical constant; idempotent; safe to commit; depends on T002)
-- [ ] T019 [SYNC] [US4] Ensure `.template-version` is committed, not ignored, in `init/gitignore`
-- [ ] T020 [SYNC] [US4] Add stamping bats test in `cicd-tests/init_env.bats` (file created with expected content; re-run idempotent)
+- [x] T018 [SYNC] [US4] Stamp `.template-version` into scaffolded apps in `init/init.sh` (read canonical constant; idempotent; safe to commit; depends on T002)
+- [x] T019 [SYNC] [US4] Ensure `.template-version` is committed, not ignored, in `init/gitignore`
+- [x] T020 [SYNC] [US4] Add stamping bats test in `cicd-tests/init_env.bats` (file created with expected content; re-run idempotent)
 
 **Checkpoint**: US4 complete — `bats cicd-tests/init_env.bats` green
 
@@ -106,8 +106,8 @@
 
 **Independent Test**: full pre-change `cicd-tests/` suite still passes; runner runs with no network/cluster; no new runtime deps in the tree.
 
-- [ ] T021 [ASYNC] [US5] Run full pre-existing suite `bats cicd-tests/` and confirm the additive regression criterion (no new failures beyond known environmental ones)
-- [ ] T022 [P] [SYNC] [US5] Verify offline determinism + no-new-dependency in `standards-audit/tests/runner.bats` (no git-network/Docker/cluster calls in check paths)
+- [x] T021 [ASYNC] [US5] Run full pre-existing suite `bats cicd-tests/` and confirm the additive regression criterion (no new failures beyond known environmental ones)
+- [x] T022 [P] [SYNC] [US5] Verify offline determinism + no-new-dependency in `standards-audit/tests/runner.bats` (no git-network/Docker/cluster calls in check paths)
 
 **Checkpoint**: US5 complete — additive criterion satisfied
 
@@ -117,11 +117,11 @@
 
 **Purpose**: Improvements affecting multiple stories
 
-- [ ] T023 [SYNC] Add "Standards Alignment" section in `README.md` (gate, opt-in caller, org-level promotion path, constitution roadmap — including the scheduled conformance-sweep usage)
-- [ ] T031 [SYNC] Add scheduled conformance-sweep caller snippet (cron/`schedule` trigger) in `examples/standards-audit-caller.yml` or the README section
-- [ ] T024 [SYNC] Run ShellCheck on `standards-audit/runner.sh build.sh init/init.sh` — no new warnings
-- [ ] T025 [P] [ASYNC] Run quickstart.md scenarios 1–5 on macOS and Linux
-- [ ] T026 [ASYNC] Optional live smoke test of the reusable workflow (quickstart scenario 6) if a GitHub runner is reachable; otherwise document manual invocation as the gate
+- [x] T023 [SYNC] Add "Standards Alignment" section in `README.md` (gate, opt-in caller, org-level promotion path, constitution roadmap — including the scheduled conformance-sweep usage)
+- [x] T031 [SYNC] Add scheduled conformance-sweep caller snippet (cron/`schedule` trigger) in `examples/standards-audit-caller.yml` or the README section
+- [x] T024 [SYNC] Run ShellCheck on `standards-audit/runner.sh build.sh init/init.sh` — no new warnings
+- [x] T025 [P] [ASYNC] Run quickstart.md scenarios 1–5 on macOS and Linux
+- [x] T026 [ASYNC] Optional live smoke test of the reusable workflow (quickstart scenario 6) if a GitHub runner is reachable; otherwise document manual invocation as the gate
 
 ---
 

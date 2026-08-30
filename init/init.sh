@@ -236,6 +236,17 @@ echo "CRONJOB=${_CRONJOB:-false}" >> .env
 
 info "Wrote .env"
 
+# ── Provenance stamp ─────────────────────────────────────────
+# Stamp template identity byte-for-byte from the canonical constant
+# (init/template-version). Idempotent: cp -n never overwrites an existing
+# stamp — P1 never mutates it. Committed via `git add .` below.
+if [ -f "$SCRIPT_DIR/template-version" ]; then
+  cp -n "$SCRIPT_DIR/template-version" .template-version 2>/dev/null || true
+  info "Wrote .template-version"
+else
+  warn "template-version constant missing — no provenance stamp written"
+fi
+
 # ── PVC toggle warning ─────────────────────────────────────────
 # Detect PVC being turned off: existing .env had PVC=true but new .env won't
 _PVC_NEW=false

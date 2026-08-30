@@ -208,3 +208,31 @@ EOF
   [[ "$output" == *"Application: full-test"* ]]
   [[ "$output" == *"Registry:    localhost:50000"* ]]
 }
+
+# ── .template-version provenance stamp ──────────────────────────
+
+@test "init.sh stamps .template-version with canonical content" {
+  run "$PROJECT_ROOT/init.sh" --app-name stamp-test
+  [ "$status" -eq 0 ]
+  [ -f "$TEST_TEMP_DIR/stamp-test/.template-version" ]
+  assert_file_contains "$TEST_TEMP_DIR/stamp-test/.template-version" "1.0.0"
+}
+
+@test "init.sh .template-version stamp is idempotent on re-run" {
+  run "$PROJECT_ROOT/init.sh" --app-name stamp-idem
+  [ "$status" -eq 0 ]
+  before="$(cat "$TEST_TEMP_DIR/stamp-idem/.template-version")"
+
+  run "$PROJECT_ROOT/init.sh" --app-name stamp-idem
+  [ "$status" -eq 0 ]
+  after="$(cat "$TEST_TEMP_DIR/stamp-idem/.template-version")"
+  [ "$before" = "$after" ]
+}
+
+@test "init.sh .template-version stamp is committed to git, not ignored" {
+  run "$PROJECT_ROOT/init.sh" --app-name stamp-git
+  [ "$status" -eq 0 ]
+
+  run git -C "$TEST_TEMP_DIR/stamp-git" ls-files --error-unmatch .template-version
+  [ "$status" -eq 0 ]
+}

@@ -1,0 +1,28 @@
+name: Standards Audit Sweep
+
+# Scheduled conformance sweep (Constitution FR3): re-audits all opted-in repos on
+# a fixed cadence so drift is caught even without a PR. Runs every Monday 02:00
+# UTC; manual dispatch available for on-demand checks.
+on:
+  schedule:
+    - cron: "0 2 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: standards-audit-sweep-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  standards:
+    name: Standards conformance sweep
+    permissions:
+      contents: read
+    # PIN the reference (Constitution I-2): replace <FULL-COMMIT-SHA> with the
+    # released commit SHA, or tag a release (e.g. @v1.0.0). Never use an
+    # unpinned branch (e.g. @main).
+    uses: <YOUR-ORG>/<AUDIT-REPO>/.github/workflows/standards-audit.yml@<FULL-COMMIT-SHA>
+    with:
+      # app-k8s | app | library — must match this repository's shape
+      repo-profile: app-k8s
+      # Audit the whole repository even if the default becomes a subdirectory:
+      # repo-root: "."
