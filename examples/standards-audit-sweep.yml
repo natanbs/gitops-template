@@ -26,3 +26,5 @@ jobs:
       repo-profile: app-k8s
       # Audit the whole repository even if the default becomes a subdirectory:
       # repo-root: "."
+      # Documented secrets exemptions (path relative to repo-root, optional):
+      # allowlist-path: standards-audit/allowlist

@@ -79,16 +79,18 @@ standards-audit/
 │   ├── structure.sh                    # new: profile-adaptive required files + YAML parse
 │   ├── secrets.sh                      # new: git-tracked credential scan (pinned ruleset)
 │   └── manifest-policy.sh              # new: .env best-effort + consistency fallback
-├── allowlist.example                   # new: exemptions template
+├── allowlist.example                 # new: exemptions template
 ├── fixtures/
-│   ├── conformant-app-k8s/             # new
-│   ├── non-conformant-app-k8s/         # new
-│   └── app-only/                       # new (N/A path fixture)
-└── tests/*.bats                        # new: runner coverage
+│   ├── conformant-app-k8s-noenv/      # new (cross-manifest fallback fixture)
+│   ├── conformant-app-k8s-env/        # new (.env-authoritative fixture)
+│   ├── non-conformant-app-k8s/        # new
+│   ├── app-only/                      # new (N/A path fixture)
+│   └── library/                       # new (library-profile fixture)
+└── tests/*.bats                      # new: runner coverage
 init/
 ├── template-version                    # new: canonical constant "1.0.0"
 └── init.sh                             # modified: stamp .template-version
-init/gitignore                          # modified: don't ignore .template-version
+init/gitignore                          # verified: no rule ignores .template-version (unmodified)
 cicd-tests/init_env.bats                # modified: stamping test
 README.md                               # modified: Standards Alignment section
 ```

@@ -28,19 +28,21 @@ if [[ -f "$repo_root/.env" ]]; then has_env=1; fi
 if [[ -d "$repo_root/k8s" ]]; then has_k8s=1; fi
 
 # --- N/A semantics: no applicable inputs for the declared profile -----------
-if [[ "$profile" == "library" ]]; then
-  emit_na "no applicative inputs for profile 'library'"
-fi
-if [[ "$profile" == "app" ]]; then
-  if [[ "$has_dockerfile" -eq 0 && "$has_env" -eq 0 ]]; then
-    emit_na "no 'app' inputs present (missing inputs are reported as N/A, never FAIL)"
-  fi
-fi
-if [[ "$profile" == "app-k8s" ]]; then
-  if [[ "$has_dockerfile" -eq 0 && "$has_env" -eq 0 && "$has_k8s" -eq 0 ]]; then
-    emit_na "no 'app-k8s' inputs present (missing inputs are reported as N/A, never FAIL)"
-  fi
-fi
+case "$profile" in
+  library)
+    emit_na "no applicative inputs for profile 'library'"
+    ;;
+  app)
+    if [[ "$has_dockerfile" -eq 0 && "$has_env" -eq 0 ]]; then
+      emit_na "no 'app' inputs present (missing inputs are reported as N/A, never FAIL)"
+    fi
+    ;;
+  app-k8s)
+    if [[ "$has_dockerfile" -eq 0 && "$has_env" -eq 0 && "$has_k8s" -eq 0 ]]; then
+      emit_na "no 'app-k8s' inputs present (missing inputs are reported as N/A, never FAIL)"
+    fi
+    ;;
+esac
 
 # --- required-file presence (surface present but a required file is missing) -
 if [[ "$profile" == "app-k8s" && "$has_k8s" -eq 1 && ! -f "$repo_root/k8s/deploy.yaml" ]]; then
@@ -70,7 +72,7 @@ yaml_problem() {
   awk '
     { line++
       if (bad != "") next
-      if (index($0, "\t") > 0) { bad = sprintf("tab character in indentation (line %d)", line); next }
+      if ($0 ~ /^[[:space:]]*\t/) { bad = sprintf("tab character in indentation (line %d)", line); next }
       if ($0 ~ /^[[:space:]]*-/ || $0 ~ /^[[:space:]]*#/ || $0 ~ /^[[:space:]]*$/) next
       if ($0 ~ /^[[:space:]]*[A-Za-z0-9_.-]+:[[:space:]]*/) {
         if ($0 ~ /^[[:space:]]*kind:/ || $0 ~ /kind:[[:space:]]*$/) { kind = 1 }

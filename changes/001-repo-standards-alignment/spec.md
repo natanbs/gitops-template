@@ -134,16 +134,21 @@ FAIL`, and exits `1`.
 **ADDED**:
 - `.github/workflows/standards-audit.yml` — reusable `workflow_call` audit.
 - `examples/standards-audit-caller.yml` — documented caller for an app repo.
+- `examples/standards-audit-sweep.yml` — documented scheduled conformance
+  sweep caller (cron `0 2 * * 1`, FR3).
 - `standards-audit/runner.sh` — local, offline audit runner (single source of
   check logic shared by CI and local runs).
 - `standards-audit/checks/` — structure, secrets, manifest-policy scripts.
+- `standards-audit/allowlist.example` — documented secrets exemptions template
+  (FR2).
 - `standards-audit/tests/*.bats` and `standards-audit/fixtures/` (conformant +
   non-conformant fixture apps).
 - `init/template-version` — canonical template version constant.
 
 **MODIFIED**:
 - `init/init.sh` — stamp `.template-version` into scaffolded apps.
-- `init/gitignore` — ensure `.template-version` is committed (not ignored).
+- `init/gitignore` — verified no `.template-version` rule is present, so the
+  stamp is committed, not ignored (no change was required).
 - `cicd-tests/init_env.bats` — template-version stamping test.
 - `README.md` — "Standards Alignment" section documenting the gate, the opt-in
   caller example, the org-level promotion path, and the constitution-mandated

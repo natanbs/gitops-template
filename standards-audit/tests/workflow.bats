@@ -59,6 +59,18 @@ assert_all_uses_pinned_to_sha() {
   [ "$output" = "." ]
 }
 
+@test "workflow exposes optional allowlist-path input (default empty)" {
+  run yqq '.on.workflow_call.inputs["allowlist-path"].required' "$WORKFLOW"
+  [ "$output" = "false" ]
+  run yqq '.on.workflow_call.inputs["allowlist-path"].default' "$WORKFLOW"
+  [ "$output" = "" ]
+}
+
+@test "workflow wires allowlist-path to runner --allowlist when set" {
+  grep -q -- '--allowlist' "$WORKFLOW"
+  grep -q -- 'allowlist-path' "$WORKFLOW"
+}
+
 @test "workflow carries minimal permissions and no secrets/id-token" {
   run yqq '.permissions["contents"]' "$WORKFLOW"
   [ "$output" = "read" ]

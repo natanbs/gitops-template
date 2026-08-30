@@ -19,6 +19,11 @@ on:
         required: false
         default: "."
         description: "path from workspace root to the audited repo"
+      allowlist-path:
+        type: string
+        required: false
+        default: ""
+        description: "path relative to repo-root to a secrets exemptions file; wired to runner --allowlist (default: runner discovers <repo-root>/standards-audit/allowlist)"
 ```
 
 Fired from a caller workflow via:
@@ -36,7 +41,8 @@ jobs:
 ## Behavior Contract
 
 - Exactly one job, runs `runner.sh --repo-root <input> --repo-profile <input>`
-  on a checkout (whole-repo depth, git-tracked surface).
+  (+ `--allowlist <repo-root>/<allowlist-path>` when `allowlist-path` is set) on a
+  checkout (whole-repo depth, git-tracked surface).
 - `permissions`: minimal — `contents: read`. No secrets, no id-token.
 - No third-party action pulls at runtime beyond the pinned reusable workflow
   bootstrap; all pinned by full commit SHA (unpinned `@main` refs prohibited by

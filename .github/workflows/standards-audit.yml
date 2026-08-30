@@ -12,6 +12,11 @@ on:
         required: false
         default: "."
         description: "path from the workspace root to the audited repository (default: the whole checkout)"
+      allowlist-path:
+        type: string
+        required: false
+        default: ""
+        description: "path relative to repo-root to a secrets exemptions file, wired to runner.sh --allowlist (default: runner discovers <repo-root>/standards-audit/allowlist if present)"
 
 permissions:
   contents: read
@@ -45,6 +50,8 @@ jobs:
       # Audit lines surface verbatim in the job log via runner stdout.
       - name: Run standards audit
         run: |
-          bash "$GITHUB_WORKSPACE/auditor/standards-audit/runner.sh" \
-            --repo-root "${{ inputs.repo-root }}" \
-            --repo-profile "${{ inputs.repo-profile }}"
+          RUNNER_ARGS=(--repo-root "${{ inputs.repo-root }}" --repo-profile "${{ inputs.repo-profile }}")
+          if [ -n "${{ inputs.allowlist-path }}" ]; then
+            RUNNER_ARGS+=(--allowlist "${{ inputs.repo-root }}/${{ inputs.allowlist-path }}")
+          fi
+          bash "$GITHUB_WORKSPACE/auditor/standards-audit/runner.sh" "${RUNNER_ARGS[@]}"
