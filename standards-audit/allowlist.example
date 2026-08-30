@@ -1,0 +1,15 @@
+# standards-audit allowlist — documented exemptions for the offline secrets scan.
+#
+# Format: one pattern per line. Lines starting with `#` are comments. An inline
+# trailing comment (after whitespace #) is accepted as the exemption justification.
+#
+# Patterns match in either of two ways:
+#   * path pattern  — matches the git-tracked file path (fixed string), or
+#   * substring     — matches any line of the scanned content.
+#
+# Reviewer-owned: adding an exemption must be justified here. Prefer fixing the
+# violation over suppressing it; exemptions are reviewed on audit.
+#
+# Example — exclude a git-tracked fixture that intentionally plants a credential
+# pattern so the scan ruleset itself stays strict:
+# standards-audit/fixtures/non-conformant-app-k8s/secrets/.env.planted   # planted fixture credential

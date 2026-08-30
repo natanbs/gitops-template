@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: audit-demo
+  namespace: apps-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: audit-demo
+  template:
+    metadata:
+      labels:
+        app: audit-demo
+    spec:
+      containers:
+      - name: audit-demo
+        image: registry.local:5000/audit-demo:v1.0.0
+        ports:
+        - containerPort: 8080
+        env:
+        - name: PORT
+          value: "8080"
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: data-pvc
