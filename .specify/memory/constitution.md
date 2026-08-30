@@ -1,50 +1,52 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+# Sync Impact Report
+
+**Version change**: (uninitialized placeholder template) → v1.0.0
+**Modified principles**: none – initial ratification
+**Added sections**: Core Principles (I. Phased Rollout Hierarchy, II. Operational Guardrails), Pending Decision Log, Governance
+**Removed sections**: none (template's third section slot and example comments dropped as unfilled)
+**Follow-up TODOs**:
+  - Pending Decision Log: 5 unresolved parameters block gated phases (Scope, Infra, Tooling, Ownership, Migration).
+  - AGENTS.md references /Users/natan/projects/agentic-sdlc-team-ai-directives/context_modules/constitution.md for inheritance; path not found — inheritance TODO(TEAM_CONSTITUTION): source missing, revisit when available.
+-->
+
+# Fleet Alignment Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Phased Rollout Hierarchy
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+Fleet-wide changes MUST follow this strict sequence. Skipping a phase without a formal waiver (see Pending Decision Log) is a violation.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+1. **Gate Compliance First** — Enforce automated PR/CI guardrails before attempting any code re-sync. Compliance gates MUST run at merge time on every consumer repo.
+2. **Shared Versioned Artifacts** — Centralize shared workflows behind explicit semantic versioning. References MUST be pinned to `@vX.Y.Z`. Dynamic or unpinned refs (e.g. `@main`, floating `latest`) are PROHIBITED.
+3. **Tracked Re-Sync** — Maintain upstream template lineage for ongoing sync. Each consumer repo MUST record the template version it was generated from so re-syncs stay auditable.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### II. Operational Guardrails
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+- **Blast-Radius Isolation** — Shared pipeline updates MUST undergo canary validation on pilot repositories prior to global release. No shared artifact reaches the fleet without a canary record.
+- **Gate Ergonomics** — Every blocking compliance check MUST output an actionable, deterministic remediation path. Any check that fails without a remedy is a defect and MUST be fixed.
+- **Bypass Auditing** — Emergency overrides REQUIRE auditable approval and an automatically tracked tech-debt expiration date. A bypass without an owner, approval record, or expiry date is a violation.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+## Pending Decision Log
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+The following parameters are blocked until explicitly resolved. Each resolution MUST be recorded as a formal amendment to this constitution.
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
-
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+- [ ] **Scope**: Fleet size & language runtime bounds
+- [ ] **Infra**: Provider constraint (GitHub-only vs. Multi-provider)
+- [ ] **Tooling**: Approval of copier dependency for template sync
+- [ ] **Ownership**: Designated maintainer team for security rule sets
+- [ ] **Migration**: Brownfield repository onboarding path
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+- This constitution supersedes all other practices and templates. Existing directives MUST be aligned with this document before they take effect.
+- Amendments require documentation, explicit approval, and a migration plan.
+- Versioning policy (Semantic Versioning):
+  - MAJOR — backward-incompatible principle removals or redefinitions.
+  - MINOR — new principle/section added or materially expanded guidance.
+  - PATCH — clarifications, wording, and non-semantic refinements.
+- Compliance review: PRs and reviews MUST verify alignment with the Core Principles.
+- Pending Decision Log items block the phases they gate; rolling out a gated phase without resolution is a violation.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2026-06-13 | Last Amended: 2026-07-16 -->
+**Version**: 1.0.0 | **Ratified**: 2026-08-30 | **Last Amended**: 2026-08-30
