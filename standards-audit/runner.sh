@@ -13,7 +13,7 @@ Usage: standards-audit/runner.sh --repo-root <PATH> --repo-profile <app-k8s|app|
                                  [--check <id>] [--allowlist <FILE>] [--help]
 
 --repo-root <PATH>       repository root to audit (files resolved relative to it)
---repo-profile <PROFILE> declared profile: app-k8s | app | library
+--repo-profile <PROFILE> declared profile (default: app-k8s): app-k8s | app | library
 --check <id>             run only this check (structure-files|secrets-scan|policy-manifests)
 --allowlist <FILE>       exemptions file for the secrets check
                          (default: <repo-root>/standards-audit/allowlist if present)
@@ -81,7 +81,7 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 [[ -n "$REPO_ROOT" ]] || usage_error "--repo-root is required"
-[[ -n "$PROFILE" ]] || usage_error "--repo-profile is required"
+[[ -n "$PROFILE" ]] || PROFILE="app-k8s"
 case "$PROFILE" in
   app-k8s|app|library) ;;
   *) usage_error "invalid --repo-profile '$PROFILE' (expected app-k8s, app, or library)" ;;

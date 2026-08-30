@@ -62,3 +62,13 @@ FIXTURES="$PROJECT_ROOT/standards-audit/fixtures"
   [ "$status" -eq 1 ]
   [ "$first" = "$output" ]
 }
+
+@test "repo-profile defaults to app-k8s when omitted (identical to explicit)" {
+  run "$RUNNER" --repo-root "$FIXTURES/conformant-app-k8s-env"
+  [ "$status" -eq 0 ]
+  default_out="$output"
+
+  run "$RUNNER" --repo-root "$FIXTURES/conformant-app-k8s-env" --repo-profile app-k8s
+  [ "$status" -eq 0 ]
+  [ "$default_out" = "$output" ]
+}

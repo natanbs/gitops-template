@@ -6,14 +6,14 @@ GitHub reusable workflow invokes exactly this binary; developers run it directly
 ## Invocation
 
 ```text
-standards-audit/runner.sh --repo-root <PATH> --repo-profile <app-k8s|app|library>
+standards-audit/runner.sh --repo-root <PATH> [--repo-profile <app-k8s|app|library>]
                           [--check <id>] [--allowlist <FILE>] [--help]
 ```
 
 | Arg | Required | Meaning |
 |-----|----------|---------|
 | `--repo-root PATH` | yes | repository root to audit (files resolved relative to it) |
-| `--repo-profile PROFILE` | yes | declared profile; one of `app-k8s`, `app`, `library` |
+| `--repo-profile PROFILE` | no | declared profile; one of `app-k8s`, `app`, `library` (default: `app-k8s` — the dominant fleet shape; still validated against the enum, never auto-detected) |
 | `--check id` | no | run only this check (debug/CI narrow use) |
 | `--allowlist FILE` | no | exemptions file for secrets check (default: `<repo-root>/standards-audit/allowlist` if present) |
 | `--help` | no | usage text, exit 0 |
