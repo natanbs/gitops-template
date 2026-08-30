@@ -183,3 +183,69 @@ teardown_allowlist_pair() {
   assert_fails_have_fix <<<"$output"
   teardown_allowlist_pair
 }
+
+# ── template-awareness: raw *.tmpl.yaml is never scored as a manifest ──
+
+@test "structure-files skips source templates (*.tmpl.yaml) in k8s/" {
+  tmp="$(mktemp -d)"
+  cp -R "$FIXTURES/conformant-app-k8s-noenv/." "$tmp/"
+  printf '%s\n' '${VOLUME_MOUNTS}' 'image: ${REGISTRY_CLUSTER_URL}:${REGISTRY_CLUSTER_PORT}/${APP_NAME}' > "$tmp/k8s/deploy.tmpl.yaml"
+
+  run "$RUNNER" --repo-root "$tmp" --repo-profile app-k8s --check structure-files
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"[PASS]	structure-files"* ]]
+  [[ "$output" != *"deploy.tmpl.yaml"* ]]
+  rm -rf "$tmp"
+}
+
+@test "policy-manifests ignores placeholders in tmpl files (no fallback false-positive)" {
+  tmp="$(mktemp -d)"
+  cp -R "$FIXTURES/conformant-app-k8s-noenv/." "$tmp/"
+  printf '%s\n' 'apiVersion: apps/v1' '  namespace: ${K8S_NAMESPACE}' 'image: ${REGISTRY_CLUSTER_URL}:${REGISTRY_CLUSTER_PORT}/${APP_NAME}:${IMAGE_TAG}' > "$tmp/k8s/deploy.tmpl.yaml"
+
+  run "$RUNNER" --repo-root "$tmp" --repo-profile app-k8s --check policy-manifests
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"[PASS]	policy-manifests"* ]]
+  [[ "$output" != *"[FAIL]"* ]]
+  rm -rf "$tmp"
+}
+
+@test "structure-files still flags malformed non-template manifests" {
+  tmp="$(mktemp -d)"
+  cp -R "$FIXTURES/conformant-app-k8s-noenv/." "$tmp/"
+  printf '%s\n' 'not a mapping key line' > "$tmp/k8s/deploy.yaml"
+
+  run "$RUNNER" --repo-root "$tmp" --repo-profile app-k8s --check structure-files
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"[FAIL]	k8s/deploy.yaml"* ]]
+  [[ "$output" == *"fix:"* ]]
+  rm -rf "$tmp"
+}
+
+# ── manifest template render contract: PVC=true output stays gate-clean ──
+
+@test "deploy.tmpl.yaml PVC=true render is valid YAML and passes the full audit" {
+  tmp="$(mktemp -d)"
+  mkdir -p "$tmp/k8s"
+  cp "$FIXTURES/conformant-app-k8s-env/.env" "$tmp/.env"
+  cp "$FIXTURES/conformant-app-k8s-env/Dockerfile" "$tmp/Dockerfile"
+
+  APP_NAME=audit-demo \
+  K8S_NAMESPACE=apps-ns \
+  CONTAINER_PORT=8080 \
+  IMAGE_TAG=v1.0.0 \
+  REGISTRY_CLUSTER_URL=registry.local \
+  REGISTRY_CLUSTER_PORT=5000 \
+  VOLUME_MOUNTS=$'        volumeMounts:\n        - name: data\n          mountPath: /data' \
+  VOLUMES=$'      volumes:\n      - name: data\n        persistentVolumeClaim:\n          claimName: data-pvc' \
+    envsubst < "$PROJECT_ROOT/init/k8s/deploy.tmpl.yaml" > "$tmp/k8s/deploy.yaml"
+
+  python3 -c "import yaml; yaml.safe_load(open('$tmp/k8s/deploy.yaml'))"
+  grep -q 'claimName: data-pvc' "$tmp/k8s/deploy.yaml"
+
+  run "$RUNNER" --repo-root "$tmp" --repo-profile app-k8s
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"AUDIT RESULT: PASS"* ]]
+  assert_has_no_fail
+  rm -rf "$tmp"
+}

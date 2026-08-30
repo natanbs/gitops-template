@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # standards-audit/checks/structure.sh — structure-files check (profile-adaptive).
 # * required files present and well-formed per profile (Dockerfile; .env
-#   name=value parseable when present; k8s/*.yaml YAML-well-formed for app-k8s)
+#   name=value parseable when present; k8s/*.yaml YAML-well-formed for app-k8s;
+#   raw source templates *.tmpl.yaml are skipped — the gate scores rendered
+#   manifests, never template injection points like ${VOLUME_MOUNTS})
 # * a profile with no applicable inputs is reported N/A, never FAIL; a
 #   partially-present input surface makes required-file gaps a FAIL (with fix).
 set -euo pipefail
@@ -67,7 +69,7 @@ if [[ "$has_env" -eq 1 ]]; then
   fi
 fi
 
-# --- k8s/*.yaml YAML well-formedness (app-k8s only) --------------------------
+# --- k8s/*.yaml YAML well-formedness (app-k8s only; *.tmpl.yaml skipped) -----
 yaml_problem() {
   awk '
     { line++
@@ -92,6 +94,7 @@ if [[ "$profile" == "app-k8s" && "$has_k8s" -eq 1 ]]; then
   for f in "$repo_root"/k8s/*.yaml; do
     [[ -e "$f" ]] || continue
     base="$(basename "$f")"
+    [[ "$base" == *.tmpl.yaml ]] && continue
     reason="$(yaml_problem "$f")"
     if [[ -n "$reason" ]]; then
       emit_fail "k8s/$base: YAML parse failed ($reason)" "fix YAML in k8s/$base (or regenerate manifests with build.sh)"

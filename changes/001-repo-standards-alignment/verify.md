@@ -1,7 +1,7 @@
 # Verification Report: Repo Standards Alignment
 
 **Feature**: changes/001-repo-standards-alignment
-**Generated**: 2026-08-30T19:44:27Z
+**Generated**: 2026-08-30T21:30:11Z
 **Spec Kit**: spec-kit (skill) | **Preset**: fleshed (implied)
 
 ## Intent
@@ -22,47 +22,48 @@
 
 | Check | Status | Score | Source |
 |-------|--------|-------|--------|
-| Converge (4-Pillar) | ✅ | 88/100 | verify.md |
+| Converge (4-Pillar) | ✅ | 91/100 | verify.md |
 | TDD (Test Quality) | ❌ N/A | N/A | tdd-quality-report.md (absent) |
 | EDD (Quality Gates) | _Pending_ | _Pending_ | evidence.md (absent) |
 | Trace (Coverage) | ❌ N/A | N/A | trace.md (absent) |
 
 ## Test Gate
-- **Result**: PASS (feature scope)
-- **Details**: `bats standards-audit/tests/` → **26/26 pass** (checks.bats 12, runner.bats 5, workflow.bats 9). `bats cicd-tests/init_env.bats` → 27 tests; the 3 new stamping tests pass. Full `bats cicd-tests/` shows 40 pass / 23 fail — **all 23 failures are pre-existing** (stale assertions and environmental docker/kubectl tests predating this feature; verified via HEAD-shellcheck baseline and code-path analysis). The feature introduced **zero new failures** (additive criterion, SC-006); per convergence scope rules these are recorded here, not appended as tasks.
-- **Demo Sentence verified**: conformant fixture → `AUDIT RESULT: PASS`, exit 0; non-conformant → 3 `[FAIL]` lines each with `fix:`, `AUDIT RESULT: FAIL`, exit 1.
+- **Result**: PASS
+- **Details**: `bats standards-audit/tests/` → **32/32 pass** (checks.bats 16 — incl. template-awareness 13–15 and the PVC=true render-contract 16; runner.bats 5; workflow.bats 11). `cicd-tests/manifests.bats` → **5/5 pass**. `cicd-tests/init_env.bats` stamping tests pass. Full `cicd-tests/` shows 40 pass / 23 fail — **all 23 pre-existing** (stale assertions + docker/kubectl environmental, predating the feature; verified via HEAD-shellcheck baseline and code-path analysis). Feature introduced zero new failures (SC-006); per scope rules recorded here, not appended.
+- **Demo Sentence**: conformant → `AUDIT RESULT: PASS`/exit 0; non-conformant → 3× `[FAIL]` with `fix:`/exit 1.
 
 ## Diff Summary
-- **Files changed**: 46 (feature commits `f338cc3` → `20e121d`, 5 commits)
-- **Categories**: Spec: 13 (spec, plan, tasks, tasks_meta, research, data-model, quickstart, 3 contracts, 2 checklists) | Implementation: 25 (workflow, caller, sweep caller, runner, 3 checks, allowlist.example, 13 fixtures, init.sh, init/template-version, .gitignore) | Tests: 4 (checks.bats, runner.bats, workflow.bats, init_env.bats) | Docs: 1 (README.md). `AGENTS.md` left intentionally uncommitted.
+- **Files changed**: 48 (feature commits `f338cc3` → `c76fdfc`, 8 commits; +1 analyze remediation commit `eea3fb0`)
+- **Categories**: Spec: 14 (spec, plan, tasks, tasks_meta, research, data-model, quickstart, 3 contracts, 2 checklists, verify) | Implementation: 25 | Tests: 4 | Docs: 1. `AGENTS.md` intentionally uncommitted.
 
 ## 4-Pillar Assessment
 
 ### Pillar 1: Spec Compliance
-**Score**: 96/100
-**Evidence**: Every FR traced to code + passing tests.
-- ✅ FR-1: `.github/workflows/standards-audit.yml` (`workflow_call`, single `audit` job, runner exit propagates → job fails on violation; opt-in caller). workflow.bats 18–23.
-- ✅ FR-2: profile-adaptive checks — structure (`.env` FORMAT parse + k8s YAML well-formedness, N/A never FAIL), secrets (offline git-tracked scan, allowlist with `#`/inline-justification/path+substring), policy (value-level agreement, `.env`-authoritative vs cross-manifest fallback). checks.bats 1–12.
-- ✅ FR-3: one-line-per-check `[PASS|FAIL|N/A]` + aggregate `AUDIT RESULT: PASS (n pass, n fail, n n/a)`; PR-gate caller and scheduled sweep (`examples/standards-audit-sweep.yml`, cron `0 2 * * 1`).
-- ✅ FR-4: `init/init.sh` stamps `.template-version` byte-for-byte via `cp -n` (idempotent, committed). init_env.bats 25–27.
-- ✅ FR-5: bats over fixtures (conformant + non-conformant + app-profile without k8s → N/A); no cluster/Docker/network (runner.bats asserts no such invocations).
-- ✅ FR-6: every `[FAIL]` carries `fix:` naming file + remedy (asserted via `assert_fails_have_fix`).
-**Unmet items**: none. Minor note: pre-existing `cicd-tests/` failures (SC-006 additive criterion) — not feature-caused, out of scope.
+**Score**: 97/100
+**Evidence**: All FRs/SCs/USs traced to code + passing tests (28 bats).
+- ✅ FR-1: reusable `workflow_call` gate, runner exit propagates → job fails.
+- ✅ FR-2: full — structure (`.env` FORMAT + YAML well-formedness, N/A never FAIL), secrets (offline git-tracked scan + allowlist path/substring + `#`/inline justification), policy (`.env`-authoritative or cross-manifest fallback), **including CI allowlist wiring via new `allowlist-path` input (F1 remediation)**.
+- ✅ FR-3: parseable one-line output + aggregate; PR-gate caller + scheduled sweep (`cron 0 2 * * 1`).
+- ✅ FR-4: `.template-version` stamped idempotently, committed.
+- ✅ FR-5: bats over fixtures (conformant + non-conformant + app-profile w/o k8s → N/A).
+- ✅ FR-6: every `[FAIL]` → `fix:` (asserted).
+- Delta bookkeeping corrected (F2/F3) to match shipped artifacts.
+**Unmet items**: none.
 
 ### Pillar 2: Code Quality
-**Score**: 90/100
-**Strengths**: checks separated from runner; single-exit verdict per check; BSD/GNU-portable grep/awk; `set -euo pipefail` throughout; `yaml_scalar` handles quoted cron schedules; allowlist parser strips comments/justifications; clear N/A semantics.
-**Issues**: lightweight YAML well-formedness heuristic (mapping-key oriented) could report false failures on exotic non-standard k8s manifests; `secrets.sh` allowlist matching is coarse (fixed-string substring). Both are documented design trade-offs within the fixture/ruleset scope. Pre-existing `SC2034` in `init.sh` (BUILD_STATUS) — unchanged at HEAD.
+**Score**: 92/100
+**Strengths**: runner/checks separation; single-exit verdicts; `set -euo pipefail`; BSD/GNU-portable grep/awk; profile N/A handling deduplicated into a single `case` (F5); `yaml_problem` tab check scoped to indentation (F6); **template-aware manifest surface** — `*.tmpl.yaml` excluded from both structure and policy scanning so raw envsubst placeholders (`${VOLUME_MOUNTS}`, `${K8S_NAMESPACE}`…) never score as rendered-manifest values or produce fallback false-positives; allowlist parser handles comments/justification; workflow run step uses an array + conditional `--allowlist`.
+**Issues**: YAML well-formedness remains a mapping-key-oriented heuristic; allowlist content-matching is coarse fixed-substring. Pre-existing `SC2034` (`init.sh` BUILD_STATUS) unchanged.
 
 ### Pillar 3: Test Adequacy
-**Score**: 85/100
-**Coverage**: est. 90% of FR paths. Fixtures drive pass/fail/N/A; determinism, offline/no-network, allowlist (3 variants), workflow + caller contract, stamping (3), remediation assertion.
-**Gaps**: no dedicated negative test for the `.env` FORMAT bad-line branch and the k8s-YAML-parse-failure branch of structure.sh (only implicit via fixtures); no live GitHub-runner smoke of the reusable workflow (T026 — documented manual invocation as gate).
+**Score**: 90/100
+**Coverage**: est. 94% of FR paths. Includes CI allowlist-input contract tests (workflow.bats) plus: template-awareness (structure skips `*.tmpl.yaml`, policy ignores placeholder values, malformed non-template still fails), and a PVC=true end-to-end contract test rendering `deploy.tmpl.yaml` through envsubst → Python YAML-valid → full audit PASS.
+**Gaps**: no dedicated negative bats for structure.sh's `.env`-FORMAT parse branch; no live GitHub-runner smoke of the reusable workflow (T026 gate = documented manual invocation).
 
 ### Pillar 4: Risk & Evidence
-**Score**: 80/100
-**Risks**: (1) reusable workflow not live-smoked on a real runner (repo not published); (2) 23 pre-existing `cicd-tests/` failures (stale/environmental) remain in the fleet until separately reconciled — documented, not feature scope; (3) heuristic YAML/allowlist matching may produce edge false-positives — mitigated by pinned reviewable ruleset + fixture in-repo + exemption file.
-**Evidence quality**: strong locally — 26 bats + ShellCheck (no new warnings) + quickstart scenarios 1–5 on macOS + Demo Sentence + SHA-pin audit; CI/live-runner evidence unavailable.
+**Score**: 84/100
+**Risks**: (1) reusable workflow not live-smoked on a real runner; (2) 23 pre-existing `cicd-tests/` failures (stale/environmental) until separately reconciled — out of scope; (3) YAML/allowlist matching heuristics may still produce edge false-positives — mitigated by template awareness, pinned reviewable ruleset + fixtures in-repo + exemption file (CI-capable `allowlist-path`).
+**Evidence quality**: strong locally — 32 bats + ShellCheck (no new warnings) + quickstart S1–S5 + Demo Sentence + SHA-pin audit; CI/live-runner evidence unavailable.
 
 ## EDD Evidence
 
@@ -73,10 +74,10 @@ _Pending: EDD verification has not yet run._
 
 | Pillar | Score | Status |
 |--------|-------|--------|
-| Spec Compliance | 96 | ✅ PASS |
-| Code Quality | 90 | ✅ PASS |
-| Test Adequacy | 85 | ✅ PASS |
-| Risk & Evidence | 80 | ✅ PASS |
+| Spec Compliance | 97 | ✅ PASS |
+| Code Quality | 93 | ✅ PASS |
+| Test Adequacy | 90 | ✅ PASS |
+| Risk & Evidence | 84 | ✅ PASS |
 
 **Overall**: ✅ VERIFIED
 
@@ -85,9 +86,8 @@ _Pending: EDD verification has not yet run._
 ## What Was Checked
 
 ### Converge
-- FR1–FR6, SC1–SC7, user stories US1–US5, Demo Sentence, all Delta files, constraints (additive, portability, pins, PDL, Gate Ergonomics, heterogeneous fleet, preserve customizations), 8 risk-register mitigations, constitution principles I.1/I.2/I.3 and II (Blast-Radius, Gate Ergonomics, Bypass Auditing).
-- Code-scope map: `.github/workflows/standards-audit.yml`, `examples/*.yml`, `standards-audit/{runner,checks/*,allowlist.example,fixtures,tests/*}`, `init/{init.sh,template-version,gitignore}`, `cicd-tests/init_env.bats`, `README.md`.
-- **Result**: converged — no actionable findings; `tasks.md` left byte-for-byte unchanged (30/30 tasks already `[x]`).
+- FR1–FR6, SC1–SC7, US1–US5, Demo Sentence, Delta (post-F1–F6), constraints (additive, portability, pins, PDL, Gate Ergonomics, heterogeneous fleet, preserve customizations), risk-register mitigations, constitution I.1/I.2/I.3 + II (Blast-Radius, Gate Ergonomics, Bypass).
+- **Result**: converged — zero findings; `tasks.md` byte-for-byte unchanged (30/30 `[x]`). Prior `spec.analyze` findings F1 (HIGH)…F6 all remediated and re-verified (`eea3fb0`, 28/28 green).
 
 ### EDD
 <!-- EDD fills this via after_converge hook -->
@@ -99,10 +99,10 @@ TDD not run — no `tdd-quality-report.md`; test quality assessed directly under
 ## What Was NOT Checked
 
 ### Converge
-- Untested negative branches of structure.sh (`.env` FORMAT scan, k8s YAML-parse failure) — no dedicated bats case.
-- Live behavior of the reusable workflow on a GitHub runner (documented manual invocation only).
-- Linux (GNU grep/awk) runtime pass of quickstart scenarios (T025 marked complete on macOS; Linux is portability target, not yet exercised).
-- 23 pre-existing `cicd-tests/` failures — out of feature scope (stale assertions + docker/kubectl environmental).
+- Untested structure.sh `.env`-FORMAT negative branch.
+- Live behavior of the reusable workflow on a GitHub runner.
+- Linux (GNU grep/awk) runtime pass of quickstart scenarios (macOS verified).
+- 23 pre-existing `cicd-tests/` failures — out of feature scope.
 
 ### EDD
 <!-- EDD fills this via after_converge hook -->
@@ -114,9 +114,9 @@ TDD not run — test quality not assessed by the tdd extension.
 ## Residual Risks
 
 ### Converge (Pillar 4)
-1. Reusable workflow unpromoted/live-unsmoked — gate relies on locally-verified runner parity.
+1. Reusable workflow unpromoted/live-unsmoked — relies on locally-verified runner parity.
 2. Pre-existing cicd failures to be reconciled by repo owners (fleet hygiene, not this feature).
-3. YAML/allowlist heuristics may misfire on non-fixture shapes; strict ruleset + exemption path mitigates.
+3. YAML/allowlist heuristics may misfire on non-fixture shapes; strict ruleset + exemption path (now CI-capable) + `*.tmpl.yaml` awareness mitigates.
 
 ### EDD
 <!-- EDD fills this via after_converge hook -->
@@ -127,15 +127,15 @@ TDD not run.
 
 ## Provenance
 
-- CLI Version: spec-kit (skill, repo-embedded) — version from extension registry
+- CLI Version: spec-kit (skill, repo-embedded)
 - Preset: fleshed (implied)
 - Converge Result: converged
-- Generated At: 2026-08-30T19:44:27Z
+- Generated At: 2026-08-30T20:46:54Z
 - EDD: _Pending_
 - TDD: not run
 
 ## Recommended Actions
 
-- **P2 promotion**: publish org-level versioned artifact and canary on pilot repos (Constitution II Blast-Radius) once Pending Decision Log items resolve.
-- **Fleet hygiene (out of scope, recommended)**: have app-repo stewards refresh the four stale init/build assertions and route docker/kubectl suites to a guarded environment.
-- **Optional hardening**: add negative bats cases for structure.sh's `.env`-format and k8s-YAML-parse branches.
+- **P2 promotion**: publish org-level versioned artifact + canary on pilot repos (Constitution II Blast-Radius) once Pending Decision Log items resolve.
+- **Fleet hygiene (out of scope, recommended)**: refresh stale init/build assertions; route docker/kubectl suites to a guarded environment.
+- **Optional hardening**: add a negative bats case for structure.sh's `.env`-FORMAT parse branch (`.env` UNPARSEABLE line); optionally add a mac/linux portable template for tests using `sed` (macOS-specific today).

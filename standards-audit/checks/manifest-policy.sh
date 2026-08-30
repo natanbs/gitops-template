@@ -4,6 +4,8 @@
 #   non-overlapping with structure (structure owns FORMAT parse).
 # * .env authoritative when present; manifests must agree with it.
 # * .env absent (CI checkout) -> cross-manifest internal consistency.
+# * raw source templates (*.tmpl.yaml) are excluded from the manifest surface —
+#   placeholders like ${K8S_NAMESPACE} are not values.
 # * non-app-k8s profiles or absent k8s/ -> N/A, never FAIL.
 set -euo pipefail
 
@@ -19,10 +21,13 @@ case "$profile" in
     ;;
 esac
 
-# --- applicable inputs: k8s manifests ---------------------------------------
+# --- applicable inputs: k8s manifests (rendered files, not templates) ---------
 manifests=""
 for f in "$repo_root"/k8s/*.yaml; do
   [[ -e "$f" ]] || continue
+  case "$(basename "$f")" in
+    *.tmpl.yaml) continue ;;
+  esac
   manifests="${manifests}${manifests:+$'\n'}$(basename "$f")"
 done
 if [[ -z "$manifests" ]]; then
