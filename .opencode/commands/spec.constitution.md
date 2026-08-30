@@ -1,11 +1,9 @@
 ---
-description: Create or update the project constitution from interactive or provided
-  principle inputs.
+description: Create or update the project constitution from interactive or provided principle inputs.
 handoffs:
 - label: Build Specification
   agent: spec.specify
-  prompt: Implement the feature specification based on the updated constitution. I
-    want to build...
+  prompt: Implement the feature specification based on the updated constitution. I want to build...
 ---
 
 

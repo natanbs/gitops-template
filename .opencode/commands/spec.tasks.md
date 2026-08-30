@@ -1,6 +1,5 @@
 ---
-description: Generate an actionable, dependency-ordered tasks.md for the feature based
-  on available design artifacts.
+description: Generate an actionable, dependency-ordered tasks.md for the feature based on available design artifacts.
 handoffs:
 - label: Analyze For Consistency
   agent: spec.analyze

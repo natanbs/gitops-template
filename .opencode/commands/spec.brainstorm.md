@@ -1,6 +1,5 @@
 ---
-description: Structured exploration of approaches, tradeoffs, and architecture before
-  specification creation.
+description: Structured exploration of approaches, tradeoffs, and architecture before specification creation.
 handoffs:
 - label: Create Feature Specification
   agent: spec.specify

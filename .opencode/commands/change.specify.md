@@ -1,6 +1,5 @@
 ---
-description: Create a change proposal with specification, optional plan, and task
-  breakdown
+description: Create a change proposal with specification, optional plan, and task breakdown
 handoffs:
 - label: Implement Change
   agent: change.implement

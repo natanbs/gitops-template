@@ -3,33 +3,8 @@ description: Quick-contribute a directive to team-ai-directives (LOW-FRICTION MO
 model-invocation: true
 mode: quick
 scripts:
-  sh: "for path in \"$(pwd)/.specify/scripts/bash/common.sh\" \"$(dirname \"$(pwd)\"\
-    )/scripts/bash/common.sh\"; do\n    if [[ -f \"$path\" ]]; then\n        source\
-    \ \"$path\" 2>/dev/null && break\n    fi\ndone\nREPO_ROOT=$(get_repo_root 2>/dev/null\
-    \ || git rev-parse --show-toplevel 2>/dev/null || pwd)\nCURRENT_BRANCH=$(git rev-parse\
-    \ --abbrev-ref HEAD 2>/dev/null || echo \"main\")\necho \"REPO_ROOT='$REPO_ROOT'\"\
-    \necho \"CURRENT_BRANCH='$CURRENT_BRANCH'\"\n# Resolve TEAM_DIRECTIVES\nTEAM_DIRECTIVES_RESOLVED=false\n\
-    if [[ -n \"${SPECIFY_TEAM_DIRECTIVES:-}\" ]]; then\n    echo \"TEAM_DIRECTIVES='$SPECIFY_TEAM_DIRECTIVES'\"\
-    ; TEAM_DIRECTIVES_RESOLVED=true\nfi\nif ! $TEAM_DIRECTIVES_RESOLVED && [[ -f \"\
-    $REPO_ROOT/.specify/init-options.json\" ]]; then\n    TD_PATH=$(python3 -c \"\
-    import json; d=json.load(open('$REPO_ROOT/.specify/init-options.json')); print(d.get('team_ai_directives',''))\"\
-    \ 2>/dev/null)\n    if [[ -n \"$TD_PATH\" ]]; then\n        echo \"TEAM_DIRECTIVES='$TD_PATH'\"\
-    ; TEAM_DIRECTIVES_RESOLVED=true\n    fi\nfi\nif ! $TEAM_DIRECTIVES_RESOLVED &&\
-    \ [[ -d \"$REPO_ROOT/.specify/team-ai-directives\" ]]; then\n    echo \"TEAM_DIRECTIVES='$REPO_ROOT/.specify/team-ai-directives'\"\
-    ; TEAM_DIRECTIVES_RESOLVED=true\nfi\nif ! $TEAM_DIRECTIVES_RESOLVED; then\n  \
-    \  echo \"TEAM_DIRECTIVES=''\"\nfi\n"
-  ps: "$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path\n$commonPath =\
-    \ Join-Path $scriptDir \"..\\..\\..\\scripts\\powershell\\common.ps1\"\nif (Test-Path\
-    \ $commonPath) { . $commonPath }\n$repoRoot = Get-RepoRoot\n$currentBranch = git\
-    \ rev-parse --abbrev-ref HEAD 2>$null\nif (-not $currentBranch) { $currentBranch\
-    \ = \"main\" }\n\"REPO_ROOT='$repoRoot'\"\n\"CURRENT_BRANCH='$currentBranch'\"\
-    \n$tdPath = $null\nif ($env:SPECIFY_TEAM_DIRECTIVES) {\n    $tdPath = $env:SPECIFY_TEAM_DIRECTIVES\n\
-    } elseif (Test-Path \"$repoRoot\\.specify\\init-options.json\") {\n    $json =\
-    \ Get-Content \"$repoRoot\\.specify\\init-options.json\" -Raw | ConvertFrom-Json\n\
-    \    $tdPath = $json.team_ai_directives\n} elseif (Test-Path \"$repoRoot\\.specify\\\
-    team-ai-directives\") {\n    $tdPath = \"$repoRoot\\.specify\\team-ai-directives\"\
-    \n}\nif ($tdPath) { \"TEAM_DIRECTIVES='$tdPath'\" } else { \"TEAM_DIRECTIVES=''\"\
-    \ }"
+  sh: "for path in \"$(pwd)/.specify/scripts/bash/common.sh\" \"$(dirname \"$(pwd)\")/scripts/bash/common.sh\"; do\n    if [[ -f \"$path\" ]]; then\n        source \"$path\" 2>/dev/null && break\n    fi\ndone\nREPO_ROOT=$(get_repo_root 2>/dev/null || git rev-parse --show-toplevel 2>/dev/null || pwd)\nCURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo \"main\")\necho \"REPO_ROOT='$REPO_ROOT'\"\necho \"CURRENT_BRANCH='$CURRENT_BRANCH'\"\n# Resolve TEAM_DIRECTIVES\nTEAM_DIRECTIVES_RESOLVED=false\nif [[ -n \"${SPECIFY_TEAM_DIRECTIVES:-}\" ]]; then\n    echo \"TEAM_DIRECTIVES='$SPECIFY_TEAM_DIRECTIVES'\"; TEAM_DIRECTIVES_RESOLVED=true\nfi\nif ! $TEAM_DIRECTIVES_RESOLVED && [[ -f \"$REPO_ROOT/.specify/init-options.json\" ]]; then\n    TD_PATH=$(python3 -c \"import json; d=json.load(open('$REPO_ROOT/.specify/init-options.json')); print(d.get('team_ai_directives',''))\" 2>/dev/null)\n    if [[ -n \"$TD_PATH\" ]]; then\n        echo \"TEAM_DIRECTIVES='$TD_PATH'\"; TEAM_DIRECTIVES_RESOLVED=true\n    fi\nfi\nif ! $TEAM_DIRECTIVES_RESOLVED && [[ -d \"$REPO_ROOT/.specify/team-ai-directives\" ]]; then\n    echo \"TEAM_DIRECTIVES='$REPO_ROOT/.specify/team-ai-directives'\"; TEAM_DIRECTIVES_RESOLVED=true\nfi\nif ! $TEAM_DIRECTIVES_RESOLVED; then\n    echo \"TEAM_DIRECTIVES=''\"\nfi\n"
+  ps: "$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path\n$commonPath = Join-Path $scriptDir \"..\\..\\..\\scripts\\powershell\\common.ps1\"\nif (Test-Path $commonPath) { . $commonPath }\n$repoRoot = Get-RepoRoot\n$currentBranch = git rev-parse --abbrev-ref HEAD 2>$null\nif (-not $currentBranch) { $currentBranch = \"main\" }\n\"REPO_ROOT='$repoRoot'\"\n\"CURRENT_BRANCH='$currentBranch'\"\n$tdPath = $null\nif ($env:SPECIFY_TEAM_DIRECTIVES) {\n    $tdPath = $env:SPECIFY_TEAM_DIRECTIVES\n} elseif (Test-Path \"$repoRoot\\.specify\\init-options.json\") {\n    $json = Get-Content \"$repoRoot\\.specify\\init-options.json\" -Raw | ConvertFrom-Json\n    $tdPath = $json.team_ai_directives\n} elseif (Test-Path \"$repoRoot\\.specify\\team-ai-directives\") {\n    $tdPath = \"$repoRoot\\.specify\\team-ai-directives\"\n}\nif ($tdPath) { \"TEAM_DIRECTIVES='$tdPath'\" } else { \"TEAM_DIRECTIVES=''\" }"
 ---
 
 

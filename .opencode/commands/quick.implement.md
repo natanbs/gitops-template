@@ -1,15 +1,9 @@
 ---
-description: Session-based ad-hoc task execution with per-task extension hooks (LOW-FRICTION
-  MODE)
+description: Session-based ad-hoc task execution with per-task extension hooks (LOW-FRICTION MODE)
 model-invocation: true
 mode: quick
 scripts:
-  sh: "for path in \"$(pwd)/.specify/scripts/bash/common.sh\" \"$(dirname \"$(pwd)\"\
-    )/scripts/bash/common.sh\"; do\n    [[ -f \"$path\" ]] && source \"$path\" 2>/dev/null\
-    \ && break\ndone\nREPO_ROOT=$(get_repo_root 2>/dev/null || git rev-parse --show-toplevel\
-    \ 2>/dev/null || pwd)\nCURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null\
-    \ || echo \"main\")\necho \"REPO_ROOT='$REPO_ROOT'\"\necho \"CURRENT_BRANCH='$CURRENT_BRANCH'\"\
-    \n"
+  sh: "for path in \"$(pwd)/.specify/scripts/bash/common.sh\" \"$(dirname \"$(pwd)\")/scripts/bash/common.sh\"; do\n    [[ -f \"$path\" ]] && source \"$path\" 2>/dev/null && break\ndone\nREPO_ROOT=$(get_repo_root 2>/dev/null || git rev-parse --show-toplevel 2>/dev/null || pwd)\nCURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo \"main\")\necho \"REPO_ROOT='$REPO_ROOT'\"\necho \"CURRENT_BRANCH='$CURRENT_BRANCH'\"\n"
   ps: '$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
     $commonPath = Join-Path $scriptDir "..\..\..\scripts\powershell\common.ps1"

@@ -1,14 +1,12 @@
 ---
-description: Execute the implementation plan by processing and executing all tasks
-  defined in tasks.md
+description: Execute the implementation plan by processing and executing all tasks defined in tasks.md
 handoffs:
 - label: Generate Feature Trace
   agent: spec.trace
   prompt: Generate a feature execution trace from the completed implementation
 - label: Assess Convergence
   agent: spec.converge
-  prompt: Assess codebase against spec, plan, and tasks; if converged, run test gate
-    and 4-pillar assessment
+  prompt: Assess codebase against spec, plan, and tasks; if converged, run test gate and 4-pillar assessment
 scripts:
   sh: .specify/scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks
   ps: .specify/scripts/powershell/check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks

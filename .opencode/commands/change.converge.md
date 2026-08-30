@@ -1,7 +1,5 @@
 ---
-description: Assess change scope against spec and tasks; append remaining work, or
-  if converged, run test gate, diff analysis, 4-pillar assessment, write verify.md,
-  and update change status
+description: Assess change scope against spec and tasks; append remaining work, or if converged, run test gate, diff analysis, 4-pillar assessment, write verify.md, and update change status
 scripts:
   sh: .specify/scripts/bash/check-prerequisites.sh --json --paths-only
   ps: .specify/scripts/powershell/check-prerequisites.ps1 -Json -PathsOnly

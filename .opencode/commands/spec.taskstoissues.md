@@ -1,6 +1,5 @@
 ---
-description: Convert existing tasks into actionable, dependency-ordered tracker issues
-  (GitHub, GitLab, Linear, Jira) for the feature based on available design artifacts.
+description: Convert existing tasks into actionable, dependency-ordered tracker issues (GitHub, GitLab, Linear, Jira) for the feature based on available design artifacts.
 scripts:
   sh: .specify/scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks
   ps: .specify/scripts/powershell/check-prerequisites.ps1 -Json -RequireTasks -IncludeTasks
