@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cluster-app
+  namespace: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cluster-app
+  template:
+    metadata:
+      labels:
+        app: cluster-app
+    spec:
+      containers:
+        - name: app
+          image: ghcr.io/example/app:1.0.0
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - secretRef:
+                name: cluster-app-secret

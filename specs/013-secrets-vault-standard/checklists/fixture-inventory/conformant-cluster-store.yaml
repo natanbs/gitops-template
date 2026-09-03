@@ -1,0 +1,5 @@
+name: conformant-cluster-store
+repoURL: https://github.com/org/conformant-cluster-store.git
+appPath: k8s
+namespace: apps-ns
+syncWave: "11"

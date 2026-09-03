@@ -13,5 +13,5 @@ This project is bound by the team-ai-directives knowledge base.
 
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/012-init-sync-container-port/plan.md
+at specs/014-fix-vault-eso-trust/plan.md
 <!-- SPECKIT END -->

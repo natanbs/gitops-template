@@ -1,0 +1,5 @@
+name: non-conformant-no-vault
+repoURL: https://github.com/org/non-conformant-no-vault.git
+appPath: k8s
+namespace: apps-ns
+syncWave: "12"

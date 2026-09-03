@@ -1,0 +1,5 @@
+name: non-conformant-static-token
+repoURL: https://github.com/org/non-conformant-static-token.git
+appPath: k8s
+namespace: apps-ns
+syncWave: "2"

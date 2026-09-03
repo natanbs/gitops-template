@@ -1,0 +1,5 @@
+name: unknown-manual-review
+repoURL: https://github.com/org/unknown-manual-review.git
+appPath: k8s
+namespace: apps-ns
+syncWave: "15"

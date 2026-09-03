@@ -1,0 +1,5 @@
+name: store-issuer
+repoURL: https://github.com/org/store-issuer.git
+appPath: k8s
+namespace: cluster-stores
+syncWave: "0"

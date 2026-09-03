@@ -1,0 +1,5 @@
+name: conformant-vault-eso
+repoURL: https://github.com/org/conformant-vault-eso.git
+appPath: k8s
+namespace: apps-ns
+syncWave: "10"

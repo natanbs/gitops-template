@@ -1,0 +1,347 @@
+{
+  "feature": "014-fix-vault-eso-trust",
+  "created": "2026-09-02T16:51:44+03:00",
+  "tasks": {
+    "T001": {
+      "description": "Verify reused 013 tooling unchanged",
+      "files": "secrets-vault-standard/align-fleet.sh secrets-vault-standard/align-plan.py secrets-vault-standard/tests/align-fleet.bats",
+      "execution_mode": "ASYNC",
+      "status": "pending",
+      "agent_type": "general",
+      "started_at": null,
+      "completed_at": null,
+      "result_summary": null
+    },
+    "T002": {
+      "description": "Document baseline snapshot scratch convention",
+      "files": "specs/014-fix-vault-eso-trust/quickstart.md",
+      "execution_mode": "ASYNC",
+      "status": "pending",
+      "agent_type": "general",
+      "started_at": null,
+      "completed_at": null,
+      "result_summary": null
+    },
+    "T003": {
+      "description": "Operator captures baseline snapshot",
+      "files": "/tmp/014/before-state.yaml",
+      "execution_mode": "SYNC",
+      "status": "pending",
+      "agent_type": "general",
+      "started_at": null,
+      "completed_at": null,
+      "result_summary": null
+    },
+    "T004": {
+      "description": "Pin root-cause preconditions in contracts/research",
+      "files": "specs/014-fix-vault-eso-trust/contracts/vault-trust.md specs/014-fix-vault-eso-trust/research.md",
+      "execution_mode": "ASYNC",
+      "status": "pending",
+      "agent_type": "general",
+      "started_at": null,
+      "completed_at": null,
+      "result_summary": null
+    },
+    "T005": {
+      "description": "Operator read-only root-cause confirmation",
+      "files": "/tmp/014/root-cause.txt",
+      "execution_mode": "SYNC",
+      "status": "pending",
+      "agent_type": "general",
+      "started_at": null,
+      "completed_at": null,
+      "result_summary": null
+    },
+    "T006": {
+      "description": "Provision role external-secrets + policy eso-reader",
+      "files": "infra/vault/policies/eso-reader.hcl",
+      "execution_mode": "SYNC",
+      "status": "pending",
+      "agent_type": "general",
+      "started_at": null,
+      "completed_at": null,
+      "result_summary": null
+    },
+    "T007": {
+      "description": "Normalize vault-store refresh interval",
+      "files": "/dev/null",
+      "execution_mode": "SYNC",
+      "status": "pending",
+      "agent_type": "general",
+      "started_at": null,
+      "completed_at": null,
+      "result_summary": null
+    },
+    "T008": {
+      "description": "Verify vault-store Ready + all 8 synced one cycle",
+      "files": "/dev/null",
+      "execution_mode": "SYNC",
+      "status": "pending",
+      "agent_type": "general",
+      "started_at": null,
+      "completed_at": null,
+      "result_summary": null
+    },
+    "T009": {
+      "description": "Verify durable recreation-path contract",
+      "files": "specs/014-fix-vault-eso-trust/contracts/vault-trust.md",
+      "execution_mode": "ASYNC",
+      "status": "pending",
+      "agent_type": "general",
+      "started_at": null,
+      "completed_at": null,
+      "result_summary": null
+    },
+    "T010": {
+      "description": "Content-equality diff before/after all 8",
+      "files": "/tmp/014/before.yaml /tmp/014/after.yaml",
+      "execution_mode": "SYNC",
+      "status": "pending",
+      "agent_type": "general",
+      "started_at": null,
+      "completed_at": null,
+      "result_summary": null
+    },
+    "T011": {
+      "description": "Least-privilege asserts writes + out-of-scope reads",
+      "files": "specs/014-fix-vault-eso-trust/contracts/vault-trust.md",
+      "execution_mode": "SYNC",
+      "status": "pending",
+      "agent_type": "general",
+      "started_at": null,
+      "completed_at": null,
+      "result_summary": null
+    },
+    "T012": {
+      "description": "Idempotency/stability two cycles",
+      "files": "/dev/null",
+      "execution_mode": "SYNC",
+      "status": "pending",
+      "agent_type": "general",
+      "started_at": null,
+      "completed_at": null,
+      "result_summary": null
+    },
+    "T013": {
+      "description": "Provision + seed shared llm engine",
+      "files": "/dev/null",
+      "execution_mode": "SYNC",
+      "status": "pending",
+      "agent_type": "general",
+      "started_at": null,
+      "completed_at": null,
+      "result_summary": null
+    },
+    "T014": {
+      "description": "Deploy vault-llm ClusterSecretStore",
+      "files": "infra/external-secrets/vault-llm-store.yaml",
+      "execution_mode": "SYNC",
+      "status": "pending",
+      "agent_type": "general",
+      "started_at": null,
+      "completed_at": null,
+      "result_summary": null
+    },
+    "T015": {
+      "description": "Rewrite analyst + pdf-scan ES to vault-llm/opencode",
+      "files": "analyst/k8s/external-secret.yaml pdf-scan/k8s/external-secret.yaml",
+      "execution_mode": "SYNC",
+      "status": "pending",
+      "agent_type": "general",
+      "started_at": null,
+      "completed_at": null,
+      "result_summary": null
+    },
+    "T016": {
+      "description": "Migrate aws to aws/s3",
+      "files": "aws/k8s/external-secret.yaml",
+      "execution_mode": "SYNC",
+      "status": "pending",
+      "agent_type": "general",
+      "started_at": null,
+      "completed_at": null,
+      "result_summary": null
+    },
+    "T017": {
+      "description": "Seed familytree/env placeholders + empty admins/editors",
+      "files": "/dev/null",
+      "execution_mode": "SYNC",
+      "status": "pending",
+      "agent_type": "general",
+      "started_at": null,
+      "completed_at": null,
+      "result_summary": null
+    },
+    "T018": {
+      "description": "Update eso-reader + aws-read-env policies",
+      "files": "infra/vault/policies/eso-reader.hcl infra/vault/policies/aws-read-env.hcl",
+      "execution_mode": "SYNC",
+      "status": "pending",
+      "agent_type": "general",
+      "started_at": null,
+      "completed_at": null,
+      "result_summary": null
+    },
+    "T019": {
+      "description": "Rewrite familytree external-secret.yaml flat env + admins/editors",
+      "files": "familytree/k8s/external-secret.yaml familytree/k8s/external-secret-auth.yaml",
+      "execution_mode": "ASYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-09-02T16:59:13+03:00",
+      "completed_at": "2026-09-02T17:16:12+03:00",
+      "result_summary": "familytree/k8s/external-secret.yaml rewritten to 3 resources (familytree-env flat familytree/env + properties; familytree-admins + familytree-editors via dataFrom extract); external-secret-auth.yaml git rm'd (superseded). YAML validated 3 docs."
+    },
+    "T020": {
+      "description": "Update familytree deploy.yaml email-env + optional mounts",
+      "files": "familytree/k8s/deploy.yaml",
+      "execution_mode": "ASYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-09-02T17:16:12+03:00",
+      "completed_at": "2026-09-02T17:17:01+03:00",
+      "result_summary": "familytree/k8s/deploy.yaml: envFrom familytree-email->email-env; AUTH_SECRET_DIR (single-dir read) re-pointed to familytree-admins volume; optional familytree-editors volume + FAMILYTREE_EDITORS_DIR env ref added; smtp-secret volume now email-env. All optional/non-blocking. YAML validated. NOTE: AUTH_SECRET_DIR->familytree-admins mapping needs operator go/no-go before apply."
+    },
+    "T021": {
+      "description": "Seed bootstrap admin into familytree/admins + editors",
+      "files": "/dev/null",
+      "execution_mode": "SYNC",
+      "status": "pending",
+      "agent_type": "general",
+      "started_at": null,
+      "completed_at": null,
+      "result_summary": null
+    },
+    "T022": {
+      "description": "Apply familytree manifests + verify 8/8 SecretSynced",
+      "files": "familytree/k8s/external-secret.yaml familytree/k8s/deploy.yaml",
+      "execution_mode": "SYNC",
+      "status": "pending",
+      "agent_type": "general",
+      "started_at": null,
+      "completed_at": null,
+      "result_summary": null
+    },
+    "T023": {
+      "description": "Content-equality + least-privilege re-verify reorganized",
+      "files": "/dev/null",
+      "execution_mode": "SYNC",
+      "status": "pending",
+      "agent_type": "general",
+      "started_at": null,
+      "completed_at": null,
+      "result_summary": null
+    },
+    "T024": {
+      "description": "Execute cleanup retire analyst store/role/policy narrow eso-reader delete dormant paths",
+      "files": "specs/014-fix-vault-eso-trust/contracts/vault-trust.md",
+      "execution_mode": "SYNC",
+      "status": "pending",
+      "agent_type": "general",
+      "started_at": null,
+      "completed_at": null,
+      "result_summary": null
+    },
+    "T025": {
+      "description": "Commit rewritten manifests per applicative inventory",
+      "files": "analyst/k8s/external-secret.yaml aws/k8s/external-secret.yaml pdf-scan/k8s/external-secret.yaml familytree/k8s/external-secret.yaml",
+      "execution_mode": "SYNC",
+      "status": "pending",
+      "agent_type": "general",
+      "started_at": null,
+      "completed_at": null,
+      "result_summary": null
+    },
+    "T026": {
+      "description": "Run tooling regression net bats + shellcheck",
+      "files": "secrets-vault-standard/tests/",
+      "execution_mode": "ASYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-09-02T17:17:20+03:00",
+      "completed_at": "2026-09-02T17:18:20+03:00",
+      "result_summary": "Regression net GREEN: align-fleet.bats 11/11, detectors.bats 16/16, audit-fleet.bats 18/18 (45 total, 0 fail); shellcheck clean exit 0 on *.sh + detectors/*.sh."
+    },
+    "T027": {
+      "description": "Traceability audit FR/SC/edge cases",
+      "files": "specs/014-fix-vault-eso-trust/quickstart.md specs/014-fix-vault-eso-trust/contracts/",
+      "execution_mode": "ASYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-09-02T17:18:20+03:00",
+      "completed_at": "2026-09-02T17:18:37+03:00",
+      "result_summary": "Traceability audit: all FR-001..014 / SC-001..010 / edge cases map to quickstart Steps or contracts. Fixed quickstart Step 4 (familytree-admin->familytree-admins/editors ES names, three-resource external-secret.yaml, removed external-secret-auth.yaml) and Step 6 scratch paths /tmp->/tmp/014."
+    },
+    "T028": {
+      "description": "Final contracts-vs-live review + tasks-meta summary",
+      "files": "specs/014-fix-vault-eso-trust/tasks_meta.json",
+      "execution_mode": "ASYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-09-02T17:18:37+03:00",
+      "completed_at": "2026-09-02T17:18:50+03:00",
+      "result_summary": "Final review: contracts (vault-trust.md eso-reader scope = familytree/email/llm-data covers familytree-admins/editors + email-env; migration.md §2/3 matches staged three-resource external-secret.yaml) and quickstart Steps consistent with staged manifests and spec FR/SC/edge cases. tasks_meta summary reconciled."
+    },
+    "T029": {
+      "description": "Apply + ArgoCD-sync staged familytree rework; verify email-env + optional admins/editors mounts",
+      "files": "familytree/k8s/external-secret.yaml familytree/k8s/deploy.yaml familytree/k8s/external-secret-auth.yaml",
+      "execution_mode": "SYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": null,
+      "completed_at": "2026-09-02T19:03:52+03:00",
+      "result_summary": "Applied fleet reorg: analyst/pdf-scan->vault-llm, aws->aws/s3 (fixed remoteRef), familytree 3-res; ArgoCD refreshed+synced; orphaned ES pruned"
+    },
+    "T030": {
+      "description": "Operator seeds bootstrap admin into familytree/admins + editors (edit role OOB)",
+      "files": "/dev/null",
+      "execution_mode": "SYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": null,
+      "completed_at": "2026-09-02T19:13:48+03:00",
+      "result_summary": "Seeded bootstrap admin p17 (Natan, admin+edit) into familytree/admins + editors from existing backup; ESO synced target secrets (password_hash+admin=true)"
+    },
+    "T031": {
+      "description": "Verify 8/8 ExternalSecrets SecretSynced across 2 cycles",
+      "files": "/dev/null",
+      "execution_mode": "SYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": "2026-09-02T19:03:52+03:00",
+      "completed_at": "2026-09-02T19:13:48+03:00",
+      "result_summary": "8/8 ExternalSecrets SecretSynced=True; all 8 target Secrets present: analyst(1) pdf-scan(1) s3(2) fam-env(3) admins(1) editors(1) email-env(5) email-bulk(3); familytree role secrets now carry p17 claims",
+      "failure_reason": "8/8 ES SecretSynced=True but familytree-admins/editors have empty Vault source (T030 seed pending) - no target secret bytes"
+    },
+    "T032": {
+      "description": "Execute cleanup: delete dormant paths narrow eso-reader retire analyst trust",
+      "files": "specs/014-fix-vault-eso-trust/contracts/vault-trust.md",
+      "execution_mode": "SYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": null,
+      "completed_at": "2026-09-02T19:03:52+03:00",
+      "result_summary": "Deleted dormant analyst/env+pdf-scan/env (incl metadata), retired es-vault-analyst/analyst-read-env/vault-kubernetes-analyst store (+analyst repo secret-store.yaml), eso-reader already narrowed; SC-010 satisfied"
+    },
+    "T033": {
+      "description": "Re-verify byte-equality + least-privilege reorganized set",
+      "files": "/dev/null",
+      "execution_mode": "SYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": null,
+      "completed_at": "2026-09-02T19:03:52+03:00",
+      "result_summary": "Byte-structure verified: analyst/pdf-scan sk-token via vault-llm/opencode len67, s3 from aws/s3, famlayer placeholders, email-env shared; SC-010 clean"
+    },
+    "T034": {
+      "description": "Commit rewritten manifests per applicative inventory",
+      "files": "familytree/k8s/external-secret.yaml analyst/k8s/external-secret.yaml aws/k8s/external-secret.yaml pdf-scan/k8s/external-secret.yaml",
+      "execution_mode": "SYNC",
+      "status": "completed",
+      "agent_type": "general",
+      "started_at": null,
+      "completed_at": "2026-09-02T19:03:58+03:00",
+      "result_summary": "Committed reorg to all 4 repos: analyst(db0f251/secret-store rm ca41428), aws(34c39c3 remoteRef fix), pdf-scan(10a671b), familytree main(c80c41f via temp-worktree cherry-pick); pushed; ArgoCD refreshed+synced"
+    }
+  }
+}

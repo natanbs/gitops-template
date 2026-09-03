@@ -1,0 +1,5 @@
+name: non-conformant-hardcoded
+repoURL: https://github.com/org/non-conformant-hardcoded.git
+appPath: k8s
+namespace: apps-ns
+syncWave: "13"

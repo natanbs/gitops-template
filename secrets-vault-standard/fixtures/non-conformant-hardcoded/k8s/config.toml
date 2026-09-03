@@ -1,0 +1,7 @@
+[database]
+password_hash = "$2a$10$7EqJtq98hPqEX7fNZaFWoOhi5FaLxJ4bE4m0i6IuUoY0i0i0i0i0i0"
+connection_timeout = 30
+
+[api]
+openai_key = "sk-proj-ABCDEF0123456789abcdefABCDEF0123456789abcdef"
+model = "gpt-4"
