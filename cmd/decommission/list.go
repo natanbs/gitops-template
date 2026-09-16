@@ -32,6 +32,12 @@ type applicationItem struct {
 	Metadata struct {
 		Name string `json:"name"`
 	} `json:"metadata"`
+	Spec struct {
+		Source struct {
+			Path    string `json:"path"`
+			RepoURL string `json:"repoURL"`
+		} `json:"source"`
+	} `json:"spec"`
 }
 
 func ListServices(namespace string) (*ServiceList, error) {

@@ -51,6 +51,8 @@ type AuditRecord struct {
 type Config struct {
 	ServiceName string
 	Namespace   string
+	Path        string
+	LocalPath   string
 	Force       bool
 	DryRun      bool
 	JSON        bool

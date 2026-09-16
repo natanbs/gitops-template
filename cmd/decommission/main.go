@@ -110,6 +110,31 @@ func run(cfg *Config) (*runResult, []string, error) {
 
 	var notes []string
 
+	if cfg.LocalPath != "" {
+		loc, appName, found, err := resolveLocalPathToService(cfg.LocalPath)
+		if err != nil {
+			return nil, notes, err
+		}
+		fmt.Printf("\n  → Local repo path: %s\n", cfg.LocalPath)
+		fmt.Printf("  → Repo-relative fragment: %s\n", loc.Fragment)
+		if found {
+			fmt.Printf("  → Found ArgoCD application: %s\n", appName)
+			cfg.ServiceName = appName
+		} else {
+			fmt.Printf("  ! Repo %s is not managed by ArgoCD; falling back to direct decommission\n", cfg.LocalPath)
+			cfg.ServiceName = loc.ServiceName
+			notes = append(notes, "Decommissioned via local path; repo not found in ArgoCD, used direct decommission")
+		}
+	} else if cfg.Path != "" {
+		fmt.Printf("  → Finding service for path: %s\n", cfg.Path)
+		appName, err := getArgoCDApplicationByPath(cfg.Path)
+		if err != nil {
+			return nil, notes, fmt.Errorf("find application for path %s: %w", cfg.Path, err)
+		}
+		fmt.Printf("  → Found application: %s\n", appName)
+		cfg.ServiceName = appName
+	}
+
 	if !cfg.Force {
 		checks, err := runPreChecks(cfg)
 		if err != nil {
@@ -193,6 +218,8 @@ func parseFlags() (cfg *Config, listMode bool, listJSON bool) {
 		showHelp  = flag.Bool("help", false, "Print help text and exit")
 		flagList  = flag.Bool("list", false, "List all available services")
 		flagImage = flag.String("image", "", "Container image ref (e.g. k3d-reg:5000/insurance); needed when deployment is gone")
+		flagPath  = flag.String("path", "", "ArgoCD source path to decommission (e.g. services/my-app)")
+		flagLocal = flag.String("local-path", "", "Local git checkout path; maps to the ArgoCD app and decommissions it (falls back to direct removal if not in ArgoCD)")
 	)
 
 	flag.Usage = func() {
@@ -222,8 +249,8 @@ func parseFlags() (cfg *Config, listMode bool, listJSON bool) {
 		}, true, *jsonOut
 	}
 
-	if flag.NArg() < 1 {
-		fmt.Fprintln(os.Stderr, "Error: service-name is required")
+	if flag.NArg() < 1 && *flagPath == "" && *flagLocal == "" {
+		fmt.Fprintln(os.Stderr, "Error: service-name, --path, or --local-path is required")
 		fmt.Fprintf(os.Stderr, "Usage: decommission <service-name> [flags]\n")
 		os.Exit(5)
 	}
@@ -232,9 +259,17 @@ func parseFlags() (cfg *Config, listMode bool, listJSON bool) {
 	if ns == "" {
 		ns = "default"
 	}
+
+	serviceName := ""
+	if flag.NArg() > 0 {
+		serviceName = flag.Arg(0)
+	}
+
 	return &Config{
-		ServiceName: flag.Arg(0),
+		ServiceName: serviceName,
 		Namespace:   ns,
+		Path:        *flagPath,
+		LocalPath:   *flagLocal,
 		Force:       *flagForce,
 		DryRun:      *dryRun,
 		JSON:        *jsonOut,

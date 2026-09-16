@@ -13,7 +13,34 @@ type discoveredResource struct {
 }
 
 func dryRun(cfg *Config) (*runResult, error) {
-	fmt.Printf("── Dry-run: decommission %s (ns=%s) ──\n", cfg.ServiceName, cfg.Namespace)
+	if cfg.LocalPath != "" && cfg.ServiceName == "" {
+		fmt.Printf("── Dry-run: decommission %s (local path) ──\n", cfg.LocalPath)
+		loc, appName, found, err := resolveLocalPathToService(cfg.LocalPath)
+		if err != nil {
+			fmt.Printf("  ! Cannot resolve local path: %v\n", err)
+			return &runResult{Model: "unknown"}, err
+		}
+		fmt.Printf("  Repo-relative fragment: %s\n", loc.Fragment)
+		if found {
+			fmt.Printf("  Found ArgoCD application: %s\n", appName)
+			cfg.ServiceName = appName
+		} else {
+			fmt.Printf("  ! Repo not managed by ArgoCD; dry-run shows direct decommission\n")
+			cfg.ServiceName = loc.ServiceName
+		}
+	} else if cfg.Path != "" && cfg.ServiceName == "" {
+		fmt.Printf("── Dry-run: decommission %s (ns=%s) ──\n", cfg.Path, cfg.Namespace)
+		fmt.Printf("  Resolving application for path: %s\n", cfg.Path)
+		appName, err := getArgoCDApplicationByPath(cfg.Path)
+		if err != nil {
+			fmt.Printf("  ! Cannot find application: %v\n", err)
+			return &runResult{Model: "unknown"}, err
+		}
+		cfg.ServiceName = appName
+		fmt.Printf("  Found application: %s\n", appName)
+	} else {
+		fmt.Printf("── Dry-run: decommission %s (ns=%s) ──\n", cfg.ServiceName, cfg.Namespace)
+	}
 
 	model, err := detectModel(cfg.ServiceName)
 	if err != nil {
