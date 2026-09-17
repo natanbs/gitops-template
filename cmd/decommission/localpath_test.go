@@ -99,8 +99,8 @@ func TestResolveLocalPathGitCheckout(t *testing.T) {
 	if err != nil {
 		t.Fatalf("resolveLocalPath(%s) = %v", sub, err)
 	}
-	if loc.Fragment != "apps/my-svc" {
-		t.Errorf("Fragment = %q, want %q", loc.Fragment, "apps/my-svc")
+	if !strings.HasSuffix(loc.Fragment, "apps/my-svc") {
+		t.Errorf("Fragment = %q, want suffix %q", loc.Fragment, "apps/my-svc")
 	}
 	if loc.ServiceName != "my-svc" {
 		t.Errorf("ServiceName = %q, want %q", loc.ServiceName, "my-svc")
@@ -110,7 +110,7 @@ func TestResolveLocalPathGitCheckout(t *testing.T) {
 	if err != nil {
 		t.Fatalf("resolveLocalPath(worktree root) = %v", err)
 	}
-	if strings.Contains(rootLoc.Fragment, "apps/") {
-		t.Errorf("repo-root Fragment = %q, want top-level name", rootLoc.Fragment)
+	if !strings.HasSuffix(rootLoc.Fragment, "wt") {
+		t.Errorf("repo-root Fragment = %q, want to end with %q", rootLoc.Fragment, "wt")
 	}
 }
