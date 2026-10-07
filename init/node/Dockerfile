@@ -3,5 +3,6 @@ WORKDIR /app
 COPY package.json .
 RUN npm install
 COPY server.js .
-EXPOSE 80
+EXPOSE 8080
+USER node
 CMD ["node", "server.js"]

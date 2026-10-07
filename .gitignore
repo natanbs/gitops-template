@@ -37,3 +37,12 @@ vendor/
 /decommission-audit
 /decommission
 /bin/
+
+# Trivy scan artifacts (local `make trivy-*` runs)
+/.trivycache/
+/sbom.json
+trivy-*.json
+trivy-*.sarif
+
+# Fleet sweep output (`hack/trivy-fleet.sh`): per-repo SARIF/logs + summary
+/trivy-fleet-out/

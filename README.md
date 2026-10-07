@@ -287,6 +287,102 @@ check, or `examples/standards-audit-sweep.yml` for a scheduled conformance sweep
 canonical `init/template-version` constant, currently `1.0.0`), so lineage lag is
 detectable.
 
+---
+
+## Container Security (Trivy)
+
+Scanning policy lives in one file, [`trivy.yaml`](trivy.yaml). Thresholds, scanners,
+DB sources, and cache location are set there and nowhere else, so a local run and
+the CI gate cannot drift apart. Suppressions live in [`.trivyignore`](.trivyignore)
+and must carry a justification plus an `exp:` date.
+
+### Three scan stages
+
+| Stage | Target | Catches | Runs |
+|-------|--------|---------|------|
+| `source` | repo filesystem | dependency CVEs, IaC misconfiguration, committed secrets | every PR |
+| `image` | published image **by digest** | OS/library CVEs in the shipped artifact; emits CycloneDX SBOM | post-push |
+| `rescan` | same digest, current DB | CVEs **disclosed after** the image was built | weekly sweep |
+
+The `rescan` stage exists because a build-time scan is a snapshot. An image that
+passed CI can become vulnerable weeks later while nothing about it changes.
+
+### Scanning by digest, not tag
+
+Tags are mutable. The artifact that was scanned may not be the artifact that
+shipped, which makes the SARIF record a statement about something else. Pass
+`image@sha256:...` whenever the push produced a digest.
+
+### Gating
+
+Blocks on `HIGH,CRITICAL` with `--ignore-unfixed`. A CVE with no vendor patch is
+unactionable — blocking on it only teaches engineers to bypass the gate.
+Unfixed findings stay in the report; they just do not set the exit code.
+
+Start with `CRITICAL` only and add `HIGH` once the backlog is drained, rather than
+breaking every build on day one.
+
+### Run locally
+
+```bash
+make trivy-scan   # report only, never fails
+make trivy-gate   # same scan with a blocking exit code, matching CI
+make trivy-db     # pre-populate the vuln DB (also cached in CI)
+
+# Scan a specific image / emit an SBOM
+make trivy-image TRIVY_IMAGE=ghcr.io/your-org/your-app@sha256:<DIGEST>
+make trivy-sbom  TRIVY_IMAGE=ghcr.io/your-org/your-app@sha256:<DIGEST>
+```
+
+### CI gates (opt-in callers)
+
+Copy [`examples/trivy-scan-caller.yml`](examples/trivy-scan-caller.yml) into your
+app repo as a required PR check, or
+[`examples/trivy-rescan-sweep.yml`](examples/trivy-rescan-sweep.yml) for the
+scheduled rescan (`cron: "0 3 * * 1"`). Both import
+`.github/workflows/trivy-scan.yml` **SHA-pinned** — the policy that gates your
+merge must not be mutable by anyone who can push.
+
+Findings upload as SARIF to the Security tab via `if: always()`, so the full
+picture is recorded even when the gate fails. Without that, a failing build leaves
+an empty Security tab.
+
+### Fleet sweep
+
+`hack/trivy-fleet.sh` clones every repository under a GitHub account/org and
+scans each with this same `trivy.yaml`, so "what is the security posture of the
+account" is one answer instead of N answers that depend on which repos someone
+remembered to wire up.
+
+```bash
+./hack/trivy-fleet.sh                 # all repos in $GITHUB_OWNER (default: natanbs)
+./hack/trivy-fleet.sh --list          # show what would be scanned, scan nothing
+./hack/trivy-fleet.sh --repo app-a --repo app-b
+./hack/trivy-fleet.sh --no-fail       # report-only: always exit 0
+```
+
+Repos are cloned shallowly into temp dirs and scanned in parallel (`--jobs`,
+default 4). Output lands in `trivy-fleet-out/` — per-repo SARIF alongside
+`summary.md` and `summary.json`. Exit codes: `0` pass, `1` blocking
+(CRITICAL/HIGH) findings, `2` scan error or usage problem. Requires `trivy`,
+an authenticated `gh`, and `python3`.
+
+### Suppressions
+
+Prefer a VEX document (`--vex`) over an ignore line: a VEX statement travels with
+the artifact and is reviewable by anyone consuming it, while an ignore entry is
+invisible outside the repo. Use `.trivyignore` for accepted risk that is local to
+this codebase, and always set `exp:`. An unbounded ignore is how three-year-old
+CVEs reach production.
+
+### Known findings
+
+`trivy.yaml` excludes `standards-audit/fixtures/` and `secrets-vault-standard/fixtures/`.
+Those trees are **intentionally** non-conformant — planted credentials and insecure
+manifests exist to prove the detectors fire. Scanning them would be a false
+positive on every run. Add any new fixture directory to `scan.skip-dirs` in the
+same commit that introduces it.
+
 | Phase | Scope | Status |
 |-------|-------|--------|
 | P1 | Offline audit gate + `.template-version` provenance | Shipped here |
@@ -312,6 +408,7 @@ bats cicd-tests/
 | `cicd-tests/argocd.bats`    | ArgoCD Application manifest validation|
 | `cicd-tests/init_env.bats`  | `init.sh` scaffold + `.env` loading   |
 | `cicd-tests/integration.bats` | End-to-end pipeline integration     |
+| `cicd-tests/tag_release.bats` | `tag.sh` manifest retag + release    |
 
 ---
 

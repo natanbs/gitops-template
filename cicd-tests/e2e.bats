@@ -5,7 +5,7 @@ setup() {
   cd "$TEST_TEMP_DIR"
 
   # Copy the full template structure
-  mkdir -p "$TEST_TEMP_DIR/k8s"
+  mkdir -p "$TEST_TEMP_DIR/k8s" "$TEST_TEMP_DIR/argocd"
   cp -r "$PROJECT_ROOT/init/k8s" "$TEST_TEMP_DIR/init-k8s"
   cp -r "$PROJECT_ROOT/init/argocd" "$TEST_TEMP_DIR/init-argocd" 2>/dev/null || true
 
@@ -70,6 +70,11 @@ teardown() {
   export REGISTRY_CLUSTER_PORT="5000"
   export K8S_NAMESPACE="e2e-ns"
   export CONTAINER_PORT="8080"
+  # Defaults for the pvc template (mirrors init.sh's .env defaults)
+  export PVC_NAME="${APP_NAME}-data"
+  export PVC_SIZE="1Gi"
+  export PVC_ACCESS_MODE="ReadWriteOnce"
+  export PVC_STORAGE_CLASS="local-path"
 
   for tmpl in "$TEST_TEMP_DIR"/init-k8s/*.tmpl.yaml; do
     [ -f "$tmpl" ] || continue

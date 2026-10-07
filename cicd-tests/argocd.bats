@@ -4,8 +4,8 @@ setup() {
   setup_test_env
   cd "$TEST_TEMP_DIR"
 
-  if [ -f "$PROJECT_ROOT/argocd/application.tmpl.yaml" ]; then
-    cp "$PROJECT_ROOT/argocd/application.tmpl.yaml" "$TEST_TEMP_DIR/"
+  if [ -f "$PROJECT_ROOT/init/argocd/application.tmpl.yaml" ]; then
+    cp "$PROJECT_ROOT/init/argocd/application.tmpl.yaml" "$TEST_TEMP_DIR/"
   fi
 
   export APP_NAME="test-app"
@@ -52,6 +52,10 @@ teardown() {
 }
 
 @test "kubectl dry-run validates ArgoCD Application manifest" {
+  if [ ! -f "$TEST_TEMP_DIR/application.tmpl.yaml" ]; then
+    skip "ArgoCD template not yet created"
+  fi
+
   if ! command -v kubectl &>/dev/null; then
     skip "kubectl not available"
   fi

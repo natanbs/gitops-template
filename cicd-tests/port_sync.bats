@@ -145,7 +145,7 @@ EOF
   cmp -s "$TEST_TEMP_DIR/ingress.before" "$app_dir/k8s/ingress.yaml"
 }
 
-@test "init.sh without --build/--deploy leaves existing manifests untouched" {
+@test "init.sh syncs CONTAINER_PORT from .env without --build/--deploy" {
   local app_dir="$TEST_TEMP_DIR/existing"
   write_existing_manifests "$app_dir"
   cat > "$app_dir/.env" <<'EOF'
@@ -157,9 +157,14 @@ EOF
   run "$PROJECT_ROOT/init.sh"
   [ "$status" -eq 0 ]
 
-  assert_file_contains "$app_dir/k8s/svc.yaml" "port: 8080"
-  assert_file_contains "$app_dir/k8s/deploy.yaml" "containerPort: 8080"
-  assert_file_contains "$app_dir/k8s/ingress.yaml" "number: 8080"
+  assert_file_contains "$app_dir/k8s/svc.yaml" "port: 9000"
+  assert_file_contains "$app_dir/k8s/deploy.yaml" "containerPort: 9000"
+  assert_file_contains "$app_dir/k8s/ingress.yaml" "number: 9000"
+
+  # User customizations must survive the sync
+  assert_file_contains "$app_dir/k8s/svc.yaml" "custom: keep-me"
+  assert_file_contains "$app_dir/k8s/deploy.yaml" "custom: keep-me"
+  assert_file_contains "$app_dir/k8s/ingress.yaml" "custom: keep-me"
 }
 
 @test "new-app scaffolding renders default port 8080 unchanged" {

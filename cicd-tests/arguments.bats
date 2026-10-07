@@ -22,16 +22,21 @@ teardown() {
   [ "$status" -eq 1 ]
 }
 
-@test "build.sh errors when --app-name is missing" {
+@test "build.sh infers --app-name from the directory name when missing" {
+  mkdir -p "$TEST_TEMP_DIR/my-service"
+  cd "$TEST_TEMP_DIR/my-service"
   run "$PROJECT_ROOT/build.sh" --image-tag v1.0
   [ "$status" -eq 1 ]
-  [[ "$output" == *"--app-name is required"* ]]
+  [[ "$output" == *"Application: my-service"* ]]
 }
 
-@test "build.sh errors when --image-tag is missing" {
+@test "build.sh auto-versions when --image-tag is missing" {
+  mkdir -p "$TEST_TEMP_DIR/auto-version"
+  cd "$TEST_TEMP_DIR/auto-version"
   run "$PROJECT_ROOT/build.sh" --app-name my-app
   [ "$status" -eq 1 ]
-  [[ "$output" == *"--image-tag is required"* ]]
+  [[ "$output" == *"Auto-version"* ]]
+  [[ "$output" == *"Application: my-app"* ]]
 }
 
 @test "build.sh rejects invalid --app-name with uppercase" {

@@ -1,0 +1,92 @@
+# Centralized Trivy policy — single source of truth for every scan in this repo
+# and every repo that adopts it. Trivy resolves settings as:
+#   CLI flags  >  TRIVY_* env vars  >  this file  >  built-in defaults
+# so a workflow can tighten a gate without editing this file, but cannot widen
+# one silently: anything not listed here is Trivy's default, which is
+# permissive. Treat every addition here as a policy change.
+#
+# Precedence caveat: when invoked through `aquasecurity/trivy-action`, action
+# inputs are translated into TRIVY_* env vars, so they beat this file. Keep the
+# action inputs minimal and let policy live here.
+
+# Blocking/report threshold. MEDIUM and below stay visible in the table/sarif
+# output but do not affect --exit-code. Rationale: gating on everything trains
+# engineers to ignore the gate.
+severity:
+  - HIGH
+  - CRITICAL
+
+# Deliberately NOT set here: dependency-tree, table-mode, template. Those are
+# rejected unless --format table, and CI formats as sarif/json. If you want them
+# for local runs, put them in ~/.trivy.yaml (user scope) rather than here.
+
+# Default scan behavior. Overridden per-target in CI (sbom rescans are
+# vuln-only; image scans may narrow misconfig scopes).
+scan:
+  parallel: 5
+  disable-telemetry: true
+  scanners:
+    - vuln
+    - misconfig
+    - secret
+  # Vendor/generated trees carry no security signal and dominate scan time.
+  skip-dirs:
+    - .git
+    - .opencode/node_modules
+    - bin
+    - node_modules
+    - vendor
+    - __pycache__
+    - cicd-tests
+    # Fixture trees above are *intentionally* non-conformant: they embed planted
+    # credentials and insecure manifests to prove the detectors fire. Scanning
+    # them would be a guaranteed false positive on every run. If you add a
+    # fixture directory, add it here in the same commit.
+    - standards-audit/fixtures
+    - secrets-vault-standard/fixtures
+  # Files, not directories. `.opencode/package-lock.json` is gitignored dev
+  # tooling (see .opencode/.gitignore) — it is never checked out in CI, never
+  # shipped in an image, and its transitive deps (toml 4.1.2 / CVE-2026-77465)
+  # are not ours to patch. Scanning it only produces a finding that no one here
+  # can act on. Add back with a linked issue if that ever changes.
+  skip-files:
+    - .opencode/package-lock.json
+
+# Package/vulnerability policy.
+vulnerability:
+  # No vendor patch exists, so a block on these is unactionable. They stay in
+  # the report; they just don't set the exit code.
+  ignore-unfixed: true
+  ignore-status:
+    - will_not_fix
+    - fix_deferred
+    - end_of_life
+
+pkg:
+  types:
+    - os
+    - library
+
+# Where the DB cache lives. CI mounts this to actions/cache.
+cache:
+  dir: .trivycache
+  backend: fs
+
+# Vulnerability DB sources. The GCR mirror is listed first because it is
+# reachable from more networks than ghcr.io; Trivy falls through on failure.
+db:
+  repository:
+    - ghcr.io/aquasecurity/trivy-db:2
+  java-repository:
+    - ghcr.io/aquasecurity/trivy-java-db:1
+
+# Suppressions. See .trivyignore for the format and the exp: expiry convention.
+# Prefer a VEX statement (--vex) over an ignore entry: a VEX document is
+# published alongside the artifact and reviewable by consumers, while an ignore
+# line is invisible to anyone reading the image.
+ignorefile: .trivyignore
+
+# Never block. CI passes --exit-code 1 explicitly at the gate so that a local
+# `trivy fs .` is a read-only report and cannot surprise a developer with a
+# non-zero shell status.
+exit-code: 0

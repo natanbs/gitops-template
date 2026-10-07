@@ -1,0 +1,36 @@
+# .trivyignore — accepted-risk suppressions for Trivy scans.
+#
+# ONE LINE PER FINDING. Every line must carry a comment stating who accepted
+# the risk and why. A bare CVE ID with no justification is not reviewable and
+# should fail review.
+#
+# FORMAT
+#   <ID>[:<field>:<value>] [# <justification> @<approver> exp:YYYY-MM-DD]
+#
+#   <ID>          CVE-XXXX-YYYY (vuln) or AVD-XXX-0000 (misconfig) or
+#                 secret/<rule-id>
+#   exp:YYYY-MM-DD  drops the suppression entirely on this date. There is no
+#                 grace period; a stale line stops suppressing and the finding
+#                 returns. This is the whole point — an unbounded ignore is how
+#                 three-year-old CVEs end up in production.
+#
+# HOW TO CHOOSE A SUPPRESSION
+#   1. Not exploitable in this context?      -> add a line here with a comment.
+#   2. Fix exists but not yet scheduled?     -> add a line with a near expiry;
+#                                               the CVE reappears when the date
+#                                               passes, which forces the
+#                                               conversation.
+#   3. Genuinely not affected (dead code, unreachable path, patched upstream)?
+#                                            -> publish a VEX document instead
+#                                               (--vex). A VEX statement is
+#                                               attached to the artifact and
+#                                               reviewable by anyone consuming
+#                                               it; an ignore line is invisible
+#                                               outside this repo.
+#
+# REVIEW CADENCE: quarterly. Remove entries whose exp: has passed, whose fix
+# has shipped, or whose compensating control is gone.
+#
+# No suppressions are currently recorded.
+
+# CVE-2024-0000 # example — <why> @<approver> exp:2026-12-31

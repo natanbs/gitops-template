@@ -1,0 +1,27 @@
+name: Trivy Gate
+
+# PR gate: source scan only (dependencies, IaC misconfiguration, secrets).
+# Runs in ~30s and needs no registry or cluster access, so a vulnerable base
+# image or an over-privileged manifest never reaches main.
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: trivy-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  trivy:
+    name: Trivy source gate
+    permissions:
+      contents: read
+      security-events: write
+    # PIN the reference (Constitution I-2): replace <FULL-COMMIT-SHA> with the
+    # released commit SHA of the repo hosting the reusable workflow, or tag a
+    # release (e.g. @v1.0.0). Never use an unpinned branch (e.g. @main) — the
+    # policy that gates your merge would then be mutable by anyone who can push.
+    uses: <YOUR-ORG>/<TEMPLATE-REPO>/.github/workflows/trivy-scan.yml@<FULL-COMMIT-SHA>
+    with:
+      repo-root: "."
+      fail-on-findings: true

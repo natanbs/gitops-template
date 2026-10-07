@@ -1,0 +1,42 @@
+name: Trivy Rescan Sweep
+
+# Scheduled re-scan of deployed images. A build-time scan is a snapshot: it
+# answers "what was vulnerable when we shipped this?" and nothing more. CVEs
+# are disclosed continuously, so an image that passed CI can become vulnerable
+# weeks later while nothing about it changes. This sweep is the answer to "what
+# did we ship that is now broken?".
+#
+# Weekly Monday 03:00 UTC; manual dispatch for an on-demand check after a major
+# CVE disclosure (pass the digest via workflow_dispatch).
+on:
+  schedule:
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+    inputs:
+      image-ref:
+        description: "image digest to re-scan (repo@sha256:...). Leave blank to sweep every digest in the input list."
+        required: false
+        type: string
+
+concurrency:
+  group: trivy-rescan-sweep-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  trivy:
+    name: Trivy rescan sweep
+    permissions:
+      contents: read
+      security-events: write
+    # PIN the reference — see trivy-scan-caller.yml.
+    uses: <YOUR-ORG>/<TEMPLATE-REPO>/.github/workflows/trivy-scan.yml@<FULL-COMMIT-SHA>
+    with:
+      repo-root: "."
+      # Replace with the digests actually deployed to production. A matrix over
+      # digests is the shape that scales; a hardcoded list starts as one entry
+      # and is never updated.
+      image-ref: ${{ inputs.image-ref || 'ghcr.io/your-org/your-app@sha256:<DEPLOYED-DIGEST>' }}
+      # Keep this true: a rescan that cannot fail is a dashboard, and a silently
+      # green sweep is how a known-exploitable CVE survives a quarter. If you are
+      # still baselining, set false and flip it once the queue is drained.
+      fail-on-findings: true

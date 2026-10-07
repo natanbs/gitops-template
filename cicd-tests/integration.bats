@@ -21,8 +21,9 @@ teardown() {
 }
 
 @test "build.sh creates generated K8s manifests from templates" {
-  # build.sh processes templates from PROJECT_ROOT/k8s/ (the real template dir)
-  # Verify the built-in deploy template is processed with correct variables
+  # build.sh renders templates into the app repo — a sibling of the template repo
+  local app_dir="$(dirname "$PROJECT_ROOT")/test-app"
+
   run "$PROJECT_ROOT/build.sh" \
     --app-name test-app --image-tag v1.0 \
     --registry-url k3d-registry.localhost --registry-port 5000 \
@@ -30,23 +31,22 @@ teardown() {
     --k8s-ns default \
     --continue-on-error
 
-  # Template output goes to PROJECT_ROOT/k8s/ (the real template directory)
-  [ -f "$PROJECT_ROOT/k8s/deploy.yaml" ]
-  assert_file_contains "$PROJECT_ROOT/k8s/deploy.yaml" "name: test-app"
-  assert_file_contains "$PROJECT_ROOT/k8s/deploy.yaml" "k3d-reg:5000/test-app:v1.0"
-  assert_file_contains "$PROJECT_ROOT/k8s/deploy.yaml" "containerPort: 8080"
-  assert_file_contains "$PROJECT_ROOT/k8s/deploy.yaml" "namespace: default"
+  [ -f "$app_dir/k8s/deploy.yaml" ]
+  assert_file_contains "$app_dir/k8s/deploy.yaml" "name: test-app"
+  assert_file_contains "$app_dir/k8s/deploy.yaml" "k3d-reg:5000/test-app:v1.0"
+  assert_file_contains "$app_dir/k8s/deploy.yaml" "containerPort: 8080"
+  assert_file_contains "$app_dir/k8s/deploy.yaml" "namespace: default"
 }
 
-@test "build.sh --auto-deploy invokes kubectl apply" {
-  # Verify that --auto-deploy flag triggers deploy step messaging
+@test "build.sh --auto-deploy prepares GitOps manifests" {
+  # Deploy is GitOps-only: manifests are committed and applied by ArgoCD
   run "$PROJECT_ROOT/build.sh" \
     --app-name test-app --image-tag v1.0 \
     --registry-url k3d-registry.localhost --registry-port 5000 \
     --auto-deploy \
     --continue-on-error
 
-  [[ "$output" == *"Applying"* ]]
+  [[ "$output" == *"Preparing Manifests for GitOps Deploy"* ]]
 }
 
 @test "build.sh without --auto-deploy skips deploy step" {

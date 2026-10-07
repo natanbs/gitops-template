@@ -32,7 +32,7 @@ if [ -n "$_ENV_SOURCE" ]; then
 fi
 
 # If APP_NAME is still empty, infer it from the current directory name (useful when .env is missing)
-if [ -z "$APP_NAME" ]; then
+if [ -z "${APP_NAME:-}" ]; then
   APP_NAME=$(basename "$(pwd)")
 fi
 

@@ -1,0 +1,182 @@
+name: Trivy Scan (reusable)
+
+# Centralized Trivy gate. Security POLICY lives in `trivy.yaml` at the root of
+# the repository that owns this workflow, not here — this file only decides
+# WHERE to scan and WHETHER to block. Policy edits therefore review in one place
+# and this workflow stays stable.
+#
+# Three stages, each a separate job so a slow image pull cannot delay PR
+# feedback:
+#   source  — filesystem scan of the repo: dependencies, IaC misconfiguration,
+#             secrets. Runs on every PR. No cluster, no registry, no secrets.
+#   image   — scan of a published image by digest, plus CycloneDX SBOM
+#             generation. Runs when image-ref is supplied (post-push CD).
+#   rescan  — re-scan the same image against the latest vuln DB. Catches CVEs
+#             published AFTER an image was built and deployed, which no
+#             build-time scan can ever surface.
+#
+# Scanning the pushed digest rather than a tag is deliberate: a tag is mutable,
+# so the artifact that was scanned may not be the artifact that shipped.
+
+on:
+  workflow_call:
+    inputs:
+      repo-root:
+        type: string
+        required: false
+        default: "."
+        description: "path from the workspace root to the scanned repository"
+      image-ref:
+        type: string
+        required: false
+        default: ""
+        description: "image reference to scan, ideally a digest (repo@sha256:...). Empty skips the image + rescan jobs."
+      fail-on-findings:
+        type: boolean
+        required: false
+        default: true
+        description: "when false, findings are reported but never fail the workflow (use for advisory rollout)"
+
+permissions:
+  contents: read
+
+jobs:
+  source:
+    name: Source scan (deps + IaC + secrets)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # The scanned repo. fetch-depth 0 so secret scanning sees full history.
+      - name: Checkout scanned repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: repo
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Import trivy.yaml from the repository that hosts THIS reusable workflow,
+      # at the exact ref the caller pinned (job.workflow_sha), so the policy and
+      # the workflow that enforces it never drift apart.
+      - name: Checkout Trivy policy
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
+          path: policy
+          persist-credentials: false
+
+      # Runs in the policy repo so trivy.yaml is on trivy.yaml's default lookup
+      # path (the working directory). Every `trivy-config` below points here.
+      - name: Scan source tree
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: repo/${{ inputs.repo-root }}
+          trivy-config: $GITHUB_WORKSPACE/policy/trivy.yaml
+          scanners: vuln,misconfig,secret
+          format: sarif
+          output: ${{ runner.temp }}/trivy-source.sarif
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          list-all-pkgs: false
+          # Only blocking findings should fail the job; the SARIF upload below
+          # still runs so the Security tab records the full picture.
+          exit-code: ${{ inputs.fail-on-findings && '1' || '0' }}
+
+      # Upload even when the scan failed — that is precisely when the finding
+      # needs to be visible. `if: always()` is the difference between a useful
+      # Security tab and an empty one.
+      - name: Upload SARIF to GitHub Security
+        if: always()
+        uses: github/codeql-action/upload-sarif@416ff0dea110f80f05f0046500dbf7420e4bb04 # codeql-bundle-v2.27.1
+        with:
+          sarif_file: ${{ runner.temp }}/trivy-source.sarif
+          category: trivy-source
+
+  image:
+    name: Image scan + SBOM
+    needs: source
+    if: ${{ inputs.image-ref != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      # The image is pulled from a registry using the caller's ambient identity
+      # (GITHUB_TOKEN for ghcr.io, or workload identity / cloud OIDC for the
+      # in-house registry). No static registry credentials in this workflow.
+      - name: Scan image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: ${{ inputs.image-ref }}
+          trivy-config: $GITHUB_WORKSPACE/policy/trivy.yaml
+          scanners: vuln
+          format: sarif
+          output: ${{ runner.temp }}/trivy-image.sarif
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: ${{ inputs.fail-on-findings && '1' || '0' }}
+
+      - name: Upload image SARIF to GitHub Security
+        if: always()
+        uses: github/codeql-action/upload-sarif@416ff0dea110f80f05f0046500dbf7420e4bb04 # codeql-bundle-v2.27.1
+        with:
+          sarif_file: ${{ runner.temp }}/trivy-image.sarif
+          category: trivy-image
+
+      # The SBOM is the artifact that makes the next CVE answerable without a
+      # rebuild: `trivy sbom` can re-resolve the full package set against a
+      # newer DB offline.
+      - name: Generate CycloneDX SBOM
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: ${{ inputs.image-ref }}
+          trivy-config: $GITHUB_WORKSPACE/policy/trivy.yaml
+          scanners: ""
+          format: cyclonedx
+          output: ${{ runner.temp }}/sbom.json
+
+      - name: Archive SBOM
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: sbom-${{ github.run_id }}
+          path: ${{ runner.temp }}/sbom.json
+          retention-days: 90
+
+  rescan:
+    name: Rescan (new CVE disclosure)
+    needs: image
+    if: ${{ inputs.image-ref != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      # Same image, current DB. The vulnerability DB refreshes every ~12h, so a
+      # weekly run against a deployed digest reports CVEs disclosed since the
+      # build. This job is the answer to "what did we ship that is now broken".
+      - name: Rescan image against current DB
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: ${{ inputs.image-ref }}
+          trivy-config: $GITHUB_WORKSPACE/policy/trivy.yaml
+          scanners: vuln
+          format: sarif
+          output: ${{ runner.temp }}/trivy-rescan.sarif
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          # A rescan is advisory by construction: a new CVE in an already-shipped
+          # image cannot be un-shipped by failing this job. It opens an alert.
+          exit-code: ${{ inputs.fail-on-findings && '1' || '0' }}
+
+      - name: Upload rescan SARIF to GitHub Security
+        if: always()
+        uses: github/codeql-action/upload-sarif@416ff0dea110f80f05f0046500dbf7420e4bb04 # codeql-bundle-v2.27.1
+        with:
+          sarif_file: ${{ runner.temp }}/trivy-rescan.sarif
+          category: trivy-rescan

@@ -117,13 +117,14 @@ EOF
 @test "init.sh rejects invalid app name" {
   run "$PROJECT_ROOT/init.sh" --app-name "InvalidName"
   [ "$status" -eq 1 ]
-  [[ "$output" == *"k8s-safe"* ]]
+  [[ "$output" == *"K8s-safe"* ]]
 }
 
-@test "init.sh errors when --app-name is missing" {
+@test "init.sh derives the app name from the folder when --app-name is missing" {
   run "$PROJECT_ROOT/init.sh"
-  [ "$status" -eq 1 ]
-  [[ "$output" == *"--app-name is required"* ]]
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"App name:  init"* ]]
+  assert_file_contains "$TEST_TEMP_DIR/init/.env" "APP_NAME=init"
 }
 
 @test "init.sh does not copy build.sh into scaffolded project" {
@@ -132,10 +133,11 @@ EOF
   [ ! -f "$TEST_TEMP_DIR/no-build/build.sh" ]
 }
 
-@test "init.sh does not copy k8s templates into scaffolded project" {
+@test "init.sh does not copy raw .tmpl.yaml files into scaffolded project" {
   run "$PROJECT_ROOT/init.sh" --app-name no-templates
   [ "$status" -eq 0 ]
-  [ ! -d "$TEST_TEMP_DIR/no-templates/k8s" ]
+  [ -f "$TEST_TEMP_DIR/no-templates/k8s/deploy.yaml" ]
+  [ -z "$(find "$TEST_TEMP_DIR/no-templates/k8s" -name '*.tmpl.yaml' -print -quit)" ]
 }
 
 @test "init.sh does not copy init infrastructure into scaffolded project" {
