@@ -20,6 +20,12 @@ setup_test_env() {
   TEST_TEMP_DIR=$(mktemp -d)
   export TEST_TEMP_DIR
 
+  # build.sh writes app repos to APPS_DIR (default: siblings of the template
+  # repo). Point it inside the sandbox so a test run never touches the caller's
+  # filesystem and every run starts from an empty app dir.
+  mkdir -p "$TEST_TEMP_DIR/apps"
+  export APPS_DIR="$TEST_TEMP_DIR/apps"
+
   # Minimal sample Dockerfile
   cat > "$TEST_TEMP_DIR/Dockerfile" <<'EOF'
 FROM busybox:latest

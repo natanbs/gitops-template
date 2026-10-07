@@ -46,6 +46,10 @@ DEFAULT_CONTAINER_PORT="${CONTAINER_PORT:-8080}"
 DEFAULT_INGRESS_CLASS="${INGRESS_CLASS:-traefik}"
 DEFAULT_TEMPLATE_REPO_RAW="https://raw.githubusercontent.com/natanbs/gitops-template/main"
 DEFAULT_GIT_REPO_BASE="${GIT_REPO_BASE:-https://github.com/natanbs}"
+# Where app repos live: siblings of the template repo by default. Override to
+# keep them elsewhere — the test suite points this into its sandbox so it never
+# writes outside its temp dir.
+APPS_DIR="${APPS_DIR:-$(dirname "$PROJECT_ROOT")}"
 
 # ── State (preserves .env values, overridable by CLI) ──────────────
 APP_NAME="${APP_NAME:-}"
@@ -112,6 +116,8 @@ Environment variables:
   REGISTRY_URL, REGISTRY_PORT, REGISTRY_CLUSTER_URL, REGISTRY_CLUSTER_PORT,
   K8S_NAMESPACE, CONTAINER_PORT, GIT_REPO_BASE
   can be set instead of passing the corresponding flags.
+  APPS_DIR             Where generated app repos are written
+                       (default: a sibling of this template repo)
 
 Dotenv file:
   If a .env file exists in the project root, it is sourced before
@@ -284,7 +290,7 @@ step_update_cronjob() {
   step "Pipeline: Updating CronJob Manifest"
 
   local app_dir
-  app_dir="$(dirname "$PROJECT_ROOT")/$APP_NAME"
+  app_dir="$APPS_DIR/$APP_NAME"
   local cronjob="${app_dir}/k8s/cronjob.yaml"
   local full_image_ref="${REGISTRY_CLUSTER_URL}:${REGISTRY_CLUSTER_PORT}/tech-companies-pipeline:${IMAGE_TAG}"
 
@@ -300,10 +306,18 @@ step_update_cronjob() {
 step_template() {
   step "4. Processing Kubernetes Templates"
 
-  # Set PVC placeholders (empty by default, filled from .env)
+  # PVC defaults mirror the .env init.sh generates, so a rendered pvc.yaml is
+  # never left with empty name/size/accessMode/storageClass.
   PVC="${PVC:-false}"
-  PVC_NAME="${PVC_NAME:-}"
+  if [ "$PVC" = "true" ]; then
+    PVC_NAME="${PVC_NAME:-${APP_NAME}-data}"
+  else
+    PVC_NAME="${PVC_NAME:-}"
+  fi
   PVC_MOUNT_PATH="${PVC_MOUNT_PATH:-/data}"
+  PVC_SIZE="${PVC_SIZE:-1Gi}"
+  PVC_ACCESS_MODE="${PVC_ACCESS_MODE:-ReadWriteOnce}"
+  PVC_STORAGE_CLASS="${PVC_STORAGE_CLASS:-local-path}"
   VOLUME_MOUNTS=""
   VOLUMES=""
   if [ "$PVC" = "true" ] && [ -n "$PVC_NAME" ]; then
@@ -315,11 +329,11 @@ step_template() {
         persistentVolumeClaim:
           claimName: ${PVC_NAME}"
   fi
-  export APP_NAME IMAGE_TAG REGISTRY_URL REGISTRY_PORT REGISTRY_CLUSTER_URL REGISTRY_CLUSTER_PORT K8S_NAMESPACE CONTAINER_PORT INGRESS_CLASS APP_REPO_URL PVC_NAME PVC_MOUNT_PATH VOLUME_MOUNTS VOLUMES
+  export APP_NAME IMAGE_TAG REGISTRY_URL REGISTRY_PORT REGISTRY_CLUSTER_URL REGISTRY_CLUSTER_PORT K8S_NAMESPACE CONTAINER_PORT INGRESS_CLASS APP_REPO_URL PVC_NAME PVC_MOUNT_PATH PVC_SIZE PVC_ACCESS_MODE PVC_STORAGE_CLASS VOLUME_MOUNTS VOLUMES
 
-  # Derive app directory: apps are siblings of the template repo
+  # App repos are siblings of the template repo unless APPS_DIR overrides.
   local app_dir
-  app_dir="$(dirname "$PROJECT_ROOT")/$APP_NAME"
+  app_dir="$APPS_DIR/$APP_NAME"
   mkdir -p "$app_dir/k8s" "$app_dir/argocd"
 
   # Resolve K8s templates: local init/k8s/ dir or download from template repo
@@ -337,6 +351,11 @@ step_template() {
   for tmpl in "${tmpl_src}"/*.tmpl.yaml; do
     [ -f "$tmpl" ] || continue
     local filename; filename=$(basename "$tmpl" .tmpl.yaml)
+    # Only render the pvc template when PVC is active (mirrors init.sh)
+    if [ "$filename" = "pvc" ] && [ "$PVC" != "true" ]; then
+      info "  Skipping pvc.tmpl.yaml (PVC is not enabled)"
+      continue
+    fi
     local output="${app_dir}/k8s/${filename}.yaml"
     if [ -f "$output" ] && [ "$FORCE_OVERWRITE" = false ]; then
       case "$filename" in
@@ -418,7 +437,7 @@ step_deploy() {
   step "5. Preparing Manifests for GitOps Deploy"
 
   local app_dir
-  app_dir="$(dirname "$PROJECT_ROOT")/$APP_NAME"
+  app_dir="$APPS_DIR/$APP_NAME"
 
   if [ -d "$app_dir/.git" ]; then
     local changed
@@ -481,7 +500,7 @@ main() {
   # doesn't lose the version bump (deploy.yaml was already updated above).
   if [ "$_VERSION_AUTO" = true ] && [ ${#_FAILED_STEPS[@]} -eq 0 ]; then
     local app_dir
-    app_dir="$(dirname "$PROJECT_ROOT")/$APP_NAME"
+    app_dir="$APPS_DIR/$APP_NAME"
     local env_file="${app_dir}/.env"
     if [ -f "$env_file" ]; then
       if sed "s/^CURRENT_TAG=.*/CURRENT_TAG=$IMAGE_TAG/" "$env_file" > "${env_file}.tmp" 2>/dev/null; then

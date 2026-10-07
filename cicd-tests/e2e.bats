@@ -146,8 +146,7 @@ yaml.safe_load(open('$TEST_TEMP_DIR/argocd/application.yaml'))
 }
 
 @test "build.sh integrates e2e-test-app end-to-end" {
-  # Clean previous generated output
-  rm -f "$PROJECT_ROOT/k8s/deploy.yaml" "$PROJECT_ROOT/k8s/svc.yaml" "$PROJECT_ROOT/k8s/ingress.yaml" "$PROJECT_ROOT/argocd/application.yaml"
+  local app_dir="$APPS_DIR/e2e-test-app"
 
   run env REGISTRY_CLUSTER_URL=localhost REGISTRY_CLUSTER_PORT=5000 \
     "$PROJECT_ROOT/build.sh" \
@@ -160,12 +159,15 @@ yaml.safe_load(open('$TEST_TEMP_DIR/argocd/application.yaml'))
   # Should have built and tagged the image
   assert_image_exists "e2e-test-app:v1.0"
 
-  # Should have processed templates (output goes to PROJECT_ROOT/k8s/)
-  [ -f "$PROJECT_ROOT/k8s/deploy.yaml" ] && \
-    assert_file_contains "$PROJECT_ROOT/k8s/deploy.yaml" "e2e-test-app"
+  # Should have rendered manifests and the ArgoCD Application into the app repo
+  [ -f "$app_dir/k8s/deploy.yaml" ]
+  assert_file_contains "$app_dir/k8s/deploy.yaml" "e2e-test-app"
+  assert_file_contains "$app_dir/k8s/deploy.yaml" "namespace: e2e-ns"
+  assert_file_contains "$app_dir/k8s/deploy.yaml" "localhost:5000/e2e-test-app:v1.0"
+  [ -f "$app_dir/argocd/application.yaml" ]
+  assert_file_contains "$app_dir/argocd/application.yaml" "name: e2e-test-app"
 
   # Cleanup
   docker rmi "e2e-test-app:v1.0" >/dev/null 2>&1 || true
   docker rmi "localhost:5000/e2e-test-app:v1.0" >/dev/null 2>&1 || true
-  rm -f "$PROJECT_ROOT/k8s/deploy.yaml" "$PROJECT_ROOT/k8s/svc.yaml" "$PROJECT_ROOT/k8s/ingress.yaml" "$PROJECT_ROOT/argocd/application.yaml"
 }

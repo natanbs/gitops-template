@@ -165,7 +165,7 @@ curl -sL https://github.com/natanbs/gitops-template/raw/main/build.sh \
 
 | Argument              | Default       | Description                                  |
 |-----------------------|---------------|----------------------------------------------|
-| `--app-name NAME`     | _(required)_  | Application name (k8s-safe: lowercase, hyphens only) |
+| `--app-name NAME`     | folder name   | Application name (k8s-safe: lowercase, hyphens only). Defaults to the current directory name. |
 | `--dockerfile TYPE`   | `none`        | Sample Dockerfile: `go`, `python`, `node`, `none` |
 | `--registry-url URL`  | `localhost`   | Container registry hostname                  |
 | `--registry-port PORT`| `50000`       | Container registry port                      |
@@ -181,7 +181,7 @@ curl -sL https://github.com/natanbs/gitops-template/raw/main/build.sh \
 | Argument              | Default        | Description                                  |
 |-----------------------|----------------|----------------------------------------------|
 | `--app-name NAME`     | `.env` or CWD  | Application name (optional if set in `.env` or running from app dir) |
-| `--image-tag TAG`     | _(required)_   | Docker image tag (e.g. `v1.0`, `latest`)     |
+| `--image-tag TAG`     | _(auto)_      | Docker image tag (e.g. `v1.0`, `latest`). Omit to auto-increment the patch from `CURRENT_TAG`. |
 | `--registry-url URL`  | `.env` or `k3d-registry.localhost` | Container registry hostname |
 | `--registry-port PORT`| `.env` or `5000` | Container registry port                     |
 | `--k8s-ns NS`         | `.env` or `default` | Kubernetes namespace                     |
@@ -217,7 +217,7 @@ CONTAINER_PORT=8080
 2. **Tag** — `docker tag <app>:<tag> <registry>/<app>:<tag>`
 3. **Push** — `docker push <registry>/<app>:<tag>`
 4. **Template** — Process all `*.tmpl.yaml` files with `envsubst`
-5. **Deploy** — `kubectl apply` (only with `--auto-deploy`)
+5. **Deploy** — prepare the generated manifests for ArgoCD to apply from git (only with `--auto-deploy`)
 
 ---
 

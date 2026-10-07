@@ -200,7 +200,7 @@ K8S_NAMESPACE=apps-ns
 CONTAINER_PORT=9000
 EOF
 
-  local app_dir="$TEST_TEMP_DIR/myapi"
+  local app_dir="$APPS_DIR/myapi"
   write_existing_manifests "$app_dir"
 
   cd "$TEST_TEMP_DIR/repo"

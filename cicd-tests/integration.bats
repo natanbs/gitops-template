@@ -21,8 +21,9 @@ teardown() {
 }
 
 @test "build.sh creates generated K8s manifests from templates" {
-  # build.sh renders templates into the app repo — a sibling of the template repo
-  local app_dir="$(dirname "$PROJECT_ROOT")/test-app"
+  # build.sh renders templates into APPS_DIR/<app> (a sibling of the template
+  # repo by default; the test helper points it into the sandbox)
+  local app_dir="$APPS_DIR/test-app"
 
   run "$PROJECT_ROOT/build.sh" \
     --app-name test-app --image-tag v1.0 \
