@@ -90,6 +90,30 @@ EOF
   assert_file_contains "$TEST_TEMP_DIR/reg-app/.env" "REGISTRY_PORT=7777"
 }
 
+@test "init.sh preserves .env registry edits and syncs them into k8s/deploy.yaml" {
+  run "$PROJECT_ROOT/init.sh" --app-name reg-sync
+  [ "$status" -eq 0 ]
+
+  local app_dir="$TEST_TEMP_DIR/reg-sync"
+  assert_file_contains "$app_dir/.env" "REGISTRY_CLUSTER_URL=k3d-reg"
+  assert_file_contains "$app_dir/k8s/deploy.yaml" "image: k3d-reg:5000/reg-sync:v1.0.0"
+
+  # User retargets the in-cluster registry in .env, then re-runs init.sh
+  sed -i.bak \
+    -e 's|^REGISTRY_CLUSTER_URL=.*|REGISTRY_CLUSTER_URL=ghcr.io|' \
+    -e 's|^REGISTRY_CLUSTER_PORT=.*|REGISTRY_CLUSTER_PORT=8443|' \
+    "$app_dir/.env"
+  rm -f "$app_dir/.env.bak"
+
+  run "$PROJECT_ROOT/init.sh" --app-name reg-sync
+  [ "$status" -eq 0 ]
+
+  # .env edit must survive the re-run, and deploy.yaml must follow it
+  assert_file_contains "$app_dir/.env" "REGISTRY_CLUSTER_URL=ghcr.io"
+  assert_file_contains "$app_dir/.env" "REGISTRY_CLUSTER_PORT=8443"
+  assert_file_contains "$app_dir/k8s/deploy.yaml" "image: ghcr.io:8443/reg-sync:v1.0.0"
+}
+
 @test "init.sh writes .env with custom namespace" {
   run "$PROJECT_ROOT/init.sh" --app-name ns-app --k8s-ns my-ns
   [ "$status" -eq 0 ]

@@ -194,7 +194,7 @@ curl -sL https://github.com/natanbs/gitops-template/raw/main/build.sh \
 
 ### `.env` file
 
-Place `.env` in the project root. Loaded automatically by `build.sh`.
+Place `.env` in the project root. Loaded automatically by `build.sh` and `init.sh`.
 
 ```
 APP_NAME=my-api
@@ -208,6 +208,8 @@ CONTAINER_PORT=8080
 ```
 
 `build.sh` loads `.env` from the current working directory (or from the script directory if running via curl). CLI flags always override `.env` values, which override built-in defaults.
+
+`init.sh` reads the same file. Re-running it on an existing app preserves your `.env` edits and re-syncs the image registry `REGISTRY_CLUSTER_URL:REGISTRY_CLUSTER_PORT` into `k8s/deploy.yaml` (your other manifest customizations are left untouched).
 
 ---
 
@@ -231,8 +233,8 @@ All variables use the `${VARIABLE_NAME}` syntax supported by `envsubst`.
 |-------------------|--------------------------|
 | `${APP_NAME}`     | `--app-name`             |
 | `${IMAGE_TAG}`    | `--image-tag`            |
-| `${REGISTRY_URL}` | `--registry-url`         |
-| `${REGISTRY_PORT}`| `--registry-port`        |
+| `${REGISTRY_CLUSTER_URL}`  | `.env` / `REGISTRY_CLUSTER_URL`  |
+| `${REGISTRY_CLUSTER_PORT}` | `.env` / `REGISTRY_CLUSTER_PORT` |
 | `${K8S_NAMESPACE}`| `--k8s-ns`        |
 | `${CONTAINER_PORT}`| `--container-port`      |
 

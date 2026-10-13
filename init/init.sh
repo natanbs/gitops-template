@@ -68,6 +68,10 @@ EOF
 DOCKERFILE_TYPE="none"
 DEF_REGISTRY_URL="localhost"
 DEF_REGISTRY_PORT="50000"
+# In-cluster registry the cluster pulls from (see deploy.tmpl.yaml image:).
+# Distinct from the push target REGISTRY_URL; honours a shell-env override.
+DEF_REGISTRY_CLUSTER_URL="${REGISTRY_CLUSTER_URL:-k3d-reg}"
+DEF_REGISTRY_CLUSTER_PORT="${REGISTRY_CLUSTER_PORT:-5000}"
 DEF_K8S_NAMESPACE="apps-ns"
 DEF_CONTAINER_PORT="8080"
 DEF_CURRENT_TAG="v1.0.0"
@@ -150,6 +154,8 @@ cd "$TARGET_DIR" || exit 1
 _APP_NAME="$APP_NAME"
 _REGISTRY_URL="$DEF_REGISTRY_URL"
 _REGISTRY_PORT="$DEF_REGISTRY_PORT"
+_REGISTRY_CLUSTER_URL="$DEF_REGISTRY_CLUSTER_URL"
+_REGISTRY_CLUSTER_PORT="$DEF_REGISTRY_CLUSTER_PORT"
 _K8S_NS="$DEF_K8S_NAMESPACE"
 _CONTAINER_PORT="$DEF_CONTAINER_PORT"
 _CURRENT_TAG="$DEF_CURRENT_TAG"
@@ -166,6 +172,11 @@ if [ -f .env ]; then
   _APP_NAME="$(       grep -s '^APP_NAME='       .env | sed 's/^APP_NAME=//'       || echo "$APP_NAME")"
   _REGISTRY_URL="$(   grep -s '^REGISTRY_URL='   .env | sed 's/^REGISTRY_URL=//'   || echo "$DEF_REGISTRY_URL")"
   _REGISTRY_PORT="$(  grep -s '^REGISTRY_PORT='  .env | sed 's/^REGISTRY_PORT=//'  || echo "$DEF_REGISTRY_PORT")"
+  # Read the in-cluster registry so re-runs don't clobber user edits to .env
+  _REGISTRY_CLUSTER_URL="$( grep -s '^REGISTRY_CLUSTER_URL=' .env | sed 's/^REGISTRY_CLUSTER_URL=//' || echo "$DEF_REGISTRY_CLUSTER_URL")"
+  _REGISTRY_CLUSTER_PORT="$( grep -s '^REGISTRY_CLUSTER_PORT=' .env | sed 's/^REGISTRY_CLUSTER_PORT=//' || echo "$DEF_REGISTRY_CLUSTER_PORT")"
+  _REGISTRY_CLUSTER_URL="${_REGISTRY_CLUSTER_URL:-$DEF_REGISTRY_CLUSTER_URL}"
+  _REGISTRY_CLUSTER_PORT="${_REGISTRY_CLUSTER_PORT:-$DEF_REGISTRY_CLUSTER_PORT}"
   _K8S_NS="$(         grep -s '^K8S_NAMESPACE='  .env | sed 's/^K8S_NAMESPACE=//'  || echo "$DEF_K8S_NAMESPACE")"
   _CONTAINER_PORT="$( grep -s '^CONTAINER_PORT=' .env | sed 's/^CONTAINER_PORT=//' || echo "$DEF_CONTAINER_PORT")"
   _CURRENT_TAG="$(     grep -s '^CURRENT_TAG='    .env | sed 's/^CURRENT_TAG=//'    || echo "$DEF_CURRENT_TAG")"
@@ -204,8 +215,8 @@ APP_NAME=$_APP_NAME
 GIT_REPO_BASE=https://github.com/natanbs
 REGISTRY_URL=$_REGISTRY_URL
 REGISTRY_PORT=$_REGISTRY_PORT
-REGISTRY_CLUSTER_URL=k3d-reg
-REGISTRY_CLUSTER_PORT=5000
+REGISTRY_CLUSTER_URL=$_REGISTRY_CLUSTER_URL
+REGISTRY_CLUSTER_PORT=$_REGISTRY_CLUSTER_PORT
 K8S_NAMESPACE=$_K8S_NS
 CONTAINER_PORT=$_CONTAINER_PORT
 CURRENT_TAG=$_CURRENT_TAG
@@ -305,6 +316,21 @@ sync_container_port() {
   fi
 }
 
+# ── Sync REGISTRY_CLUSTER_* from .env into image references ────────
+# Existing-app manifests are preserved (not re-rendered) to keep user
+# customizations, which also means a .env registry change would never
+# reach k8s/deploy.yaml. Rewrite just the registry:port prefix of every
+# image: line so the tag and any repository path stay intact.
+sync_registry_image() {
+  if [ ! -f "k8s/deploy.yaml" ]; then
+    return 0
+  fi
+  local repl
+  repl="$(printf '%s' "${_REGISTRY_CLUSTER_URL}:${_REGISTRY_CLUSTER_PORT}" | sed -e 's/[&|\\]/\\&/g')"
+  info "  Syncing registry ${_REGISTRY_CLUSTER_URL}:${_REGISTRY_CLUSTER_PORT} into k8s/deploy.yaml"
+  sed -i.bak -E "s|(image:[[:space:]]*)[^/[:space:]]+/|\1${repl}/|g" k8s/deploy.yaml && rm -f k8s/deploy.yaml.bak
+}
+
 # ── Render k8s templates ──────────────────────────────────────
 mkdir -p k8s argocd
 
@@ -326,8 +352,8 @@ else
 fi
 export APP_NAME="${_APP_NAME}" K8S_NAMESPACE="${_K8S_NS}" CONTAINER_PORT="${_CONTAINER_PORT}" VOLUME_MOUNTS VOLUMES
 export PVC_NAME="${_PVC_NAME_FINAL}" PVC_MOUNT_PATH="${_PVC_MOUNT_FINAL}" PVC_SIZE="${_PVC_SIZE:-1Gi}" PVC_ACCESS_MODE="${_PVC_ACCESS_MODE:-ReadWriteOnce}" PVC_STORAGE_CLASS="${_PVC_STORAGE_CLASS:-local-path}"
-export REGISTRY_CLUSTER_URL="${REGISTRY_CLUSTER_URL:-k3d-reg}"
-export REGISTRY_CLUSTER_PORT="${REGISTRY_CLUSTER_PORT:-5000}"
+export REGISTRY_CLUSTER_URL="$_REGISTRY_CLUSTER_URL"
+export REGISTRY_CLUSTER_PORT="$_REGISTRY_CLUSTER_PORT"
 export INGRESS_CLASS="${_INGRESS_CLASS:-traefik}"
 export GIT_REPO_BASE="${GIT_REPO_BASE:-https://github.com/natanbs}"
 export APP_REPO_URL="${GIT_REPO_BASE}/${_APP_NAME}.git"
@@ -356,9 +382,10 @@ if [ "$_APP_EXISTS" != true ]; then
   unset IMAGE_TAG
 fi
 
-# Keep existing manifests' ports in sync with CONTAINER_PORT from .env
+# Keep existing manifests' ports and image registry in sync with .env
 if [ "$_APP_EXISTS" = true ]; then
   sync_container_port "$_CONTAINER_PORT"
+  sync_registry_image
 fi
 
 # ── Write .gitignore ────────────────────────────────────────
@@ -445,6 +472,7 @@ echo "  Directory: $TARGET_DIR"
 echo "  App name:  $APP_NAME"
 echo "  Version:   $_VERSION_PRINT"
 echo "  Registry:  $REGISTRY_URL:$REGISTRY_PORT"
+echo "  Cluster:   $REGISTRY_CLUSTER_URL:$REGISTRY_CLUSTER_PORT"
 echo "  Namespace: $K8S_NAMESPACE"
 echo
 if [ "$RUN_BUILD" = false ]; then
