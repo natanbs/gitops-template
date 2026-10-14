@@ -394,12 +394,7 @@
       "/bin/bash*": "deny"
     }
   },
-  "experimental": {
-    "openTelemetry": true
-  },
-  "plugin": [
-    "./.opencode/plugin/speckit-events.ts",
-    "./.opencode/plugin/secret-redact.ts",
+  "plugins": [
     "@langfuse/opencode-observability-plugin@latest"
   ]
 }
