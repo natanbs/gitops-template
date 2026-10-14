@@ -1,4 +1,4 @@
-import type { Plugin } from "@opencode-ai/plugin"
+import { Plugin } from "@opencode/plugin"
 
 const SECRET_PATTERNS: Array<{ name: string; pattern: RegExp }> = [
   { name: "AWS_SECRET_KEY", pattern: /(?<![A-Za-z0-9/+=])[A-Za-z0-9/+=]{40}(?![A-Za-z0-9/+=])/g },
@@ -46,27 +46,103 @@ function scanAndRedact(obj: any): any {
   return obj
 }
 
-export default (async () => {
-  return {
-    "tool.execute.after": async (input: any, output: any) => {
-      if (output?.output) {
-        output.output = scanAndRedact(output.output)
+/** Redact the `{ type, value }` union carried by a tool-result part. */
+function redactToolResultValue(value: any): any {
+  if (value && typeof value === "object" && "value" in value) {
+    const payload = value as { value: unknown }
+    if (Array.isArray(payload.value)) {
+      for (const item of payload.value) {
+        if (item && typeof item === "object" && typeof (item as any).text === "string") {
+          ;(item as any).text = redactSecrets((item as any).text)
+        }
       }
-    },
-    "experimental.chat.messages.transform": async (input: any, output: any) => {
-      if (output?.messages) {
-        for (const msg of output.messages) {
-          if (msg.content && typeof msg.content === "string") {
-            msg.content = redactSecrets(msg.content)
-          } else if (Array.isArray(msg.content)) {
-            for (const part of msg.content) {
-              if (part.type === "text" && typeof part.text === "string") {
-                part.text = redactSecrets(part.text)
-              }
+    } else {
+      payload.value = scanAndRedact(payload.value)
+    }
+    return value
+  }
+  return scanAndRedact(value)
+}
+
+/** Redact a system prompt and every message part visible to a model request. */
+function redactRequest(context: { system?: unknown; messages?: unknown }): void {
+  if (Array.isArray(context.system)) {
+    for (const part of context.system) {
+      if (part && typeof part === "object" && typeof (part as any).text === "string") {
+        ;(part as any).text = redactSecrets((part as any).text)
+      }
+    }
+  }
+  if (!Array.isArray(context.messages)) return
+  for (const message of context.messages) {
+    const content = (message as any)?.content
+    if (typeof content === "string") {
+      ;(message as any).content = redactSecrets(content)
+      continue
+    }
+    if (!Array.isArray(content)) continue
+    for (const part of content) {
+      if (!part || typeof part !== "object") continue
+      const typed = part as any
+      switch (typed.type) {
+        case "text":
+        case "reasoning":
+        case "compaction":
+          if (typeof typed.text === "string") typed.text = redactSecrets(typed.text)
+          break
+        case "tool-call":
+          if (typed.input && typeof typed.input === "object") typed.input = scanAndRedact(typed.input)
+          break
+        case "tool-result":
+          typed.result = redactToolResultValue(typed.result)
+          break
+      }
+    }
+  }
+}
+
+export default Plugin.define({
+  id: "secret-redact",
+
+  async setup(ctx) {
+    // V1 `tool.execute.after` -> V2 `tool.hook("execute.after")`.
+    await ctx.tool.hook("execute.after", (event: any) => {
+      if (event.status === "completed") {
+        const result = event.result
+        if (!result) return
+        if (typeof result.content === "string") {
+          result.content = redactSecrets(result.content)
+        } else if (Array.isArray(result.content)) {
+          for (const item of result.content) {
+            if (item && typeof item === "object" && typeof item.text === "string") {
+              item.text = redactSecrets(item.text)
             }
           }
         }
+        if (typeof result.output === "string") {
+          result.output = redactSecrets(result.output)
+        } else if (result.output && typeof result.output === "object") {
+          result.output = scanAndRedact(result.output)
+        }
+        if (result.metadata && typeof result.metadata === "object") {
+          result.metadata = scanAndRedact(result.metadata)
+        }
+      } else {
+        const failure = event.error
+        if (!failure) return
+        if (typeof failure.message === "string") failure.message = redactSecrets(failure.message)
+        if (failure.metadata && typeof failure.metadata === "object") {
+          failure.metadata = scanAndRedact(failure.metadata)
+        }
       }
-    },
-  }
-}) satisfies Plugin
+    })
+
+    // V1 `experimental.chat.messages.transform` -> V2 session request hooks.
+    // Register on every model-request kind so no request escapes redaction.
+    for (const kind of ["context", "compaction", "generate", "title"] as const) {
+      await ctx.session.hook(kind, (event: any) => {
+        redactRequest(event as { system?: unknown; messages?: unknown })
+      })
+    }
+  },
+})
