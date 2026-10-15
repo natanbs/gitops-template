@@ -52,6 +52,10 @@ Options:
   --build             Run build.sh after scaffolding (build + push)
   --deploy            Run build.sh --auto-deploy after scaffolding
   --image-tag TAG     Docker image tag for --build/--deploy (omit to auto-version)
+
+Platform repos: if the target directory contains a committed
+.gitops-platform marker file, no k8s/argocd scaffold is created and
+--build/--deploy run build.sh with --skip-template (build + push only).
   --help               Show this help message
 
 Examples:
@@ -332,7 +336,11 @@ sync_registry_image() {
 }
 
 # ── Render k8s templates ──────────────────────────────────────
-mkdir -p k8s argocd
+# Platform repos (.gitops-platform marker) manage their own manifests —
+# don't create scaffold dirs for them.
+if [ ! -f .gitops-platform ]; then
+  mkdir -p k8s argocd
+fi
 
 # Compute PVC name and mount path (used for both live templates and exports)
 _PVC_NAME_FINAL="${_PVC_NAME:-$_APP_NAME-data}"
@@ -433,7 +441,14 @@ _build_tag_arg() {
 }
 
 _build_extra_args() {
-  :  # build.sh handles existing manifests natively — no extra flags needed
+  # Platform repos (committed .gitops-platform marker) own their manifests:
+  # build.sh would (re)create k8s/deploy|svc|ingress.yaml plus
+  # argocd/application.yaml and collide with them (e.g. floci whole-stack
+  # k8s/). build.sh also guards on the marker itself; this keeps
+  # --build/--deploy consistent when driven from init.sh.
+  if [ -f .gitops-platform ]; then
+    echo "--skip-template"
+  fi
 }
 
 if [ "$RUN_BUILD" = true ]; then

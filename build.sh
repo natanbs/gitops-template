@@ -110,6 +110,8 @@ Optional:
   --continue-on-error   Continue pipeline even if a step fails
   --force               Overwrite existing K8s/ArgoCD manifest files
   --skip-template       Skip K8s/ArgoCD template generation
+                        (also auto-skipped in repos containing a
+                        committed .gitops-platform marker file)
   --help                Show this help message and exit
 
 Environment variables:
@@ -457,6 +459,16 @@ step_deploy() {
 # ── Main ───────────────────────────────────────────────────────────
 main() {
   parse_args "$@"
+
+  # Platform repos (committed .gitops-platform marker in the app dir) own
+  # their manifests, so they must never receive rendered app templates —
+  # e.g. floci, a platform/IaC repo whose k8s/ holds the whole-stack
+  # deployment rather than a template app. Build/tag/push still run; only
+  # template generation is skipped. No marker: behavior unchanged.
+  if [ -f "$APPS_DIR/$APP_NAME/.gitops-platform" ]; then
+    SKIP_TEMPLATE=true
+    info "Platform repo detected (.gitops-platform) — skipping template generation"
+  fi
 
   # Derive repo URL from convention if not explicitly set
   if [ -z "$APP_REPO_URL" ] && [ -n "$APP_NAME" ]; then
