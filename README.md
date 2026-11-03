@@ -4,6 +4,17 @@ A reusable CI/CD pipeline template for building, containerizing, and deploying
 any application to Kubernetes via ArgoCD. Zero hardcoded names — everything is
 parameterized via CLI flags or environment variables.
 
+## Role in the lab bootstrap (exception E12)
+
+`task build-apps` in `../floci` invokes `ecr.sh --bump` from this repository before
+ArgoCD syncs the applications. This step is a registered imperative exception:
+building and pushing OCI images mutates registry state that Git cannot describe
+(criterion **C1**, non-cluster state), while the manifest bump it commits *is*
+declarative. The canonical register and the "declarative where practical" criteria
+live in
+[`../floci/specs/006-declarative-bootstrap-refactor/contracts/bootstrap-cli.md`](../floci/specs/006-declarative-bootstrap-refactor/contracts/bootstrap-cli.md)
+§5; this repository must not duplicate that register.
+
 ## How to Build
 
 ### End-to-end workflow
