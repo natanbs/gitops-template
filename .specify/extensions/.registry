@@ -27,7 +27,7 @@
       "enabled": true,
       "priority": 1,
       "registered_commands": {
-        "opencode": [
+        "kilocode": [
           "team.boot",
           "team.discover",
           "team.curate",
@@ -37,8 +37,12 @@
           "team.verify"
         ]
       },
-      "registered_skills": [],
-      "installed_at": "2026-08-05T09:12:51.288459+00:00"
+      "registered_skills": [
+        "team-boot",
+        "team-discover",
+        "team-skills"
+      ],
+      "installed_at": "2026-10-19T20:33:28.794822+00:00"
     }
   }
 }

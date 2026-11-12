@@ -2,14 +2,14 @@
   "version": "unknown",
   "integration_state_schema": 1,
   "installed_integrations": [
-    "opencode"
+    "kilocode"
   ],
   "integration_settings": {
-    "opencode": {
+    "kilocode": {
       "script": "sh",
       "invoke_separator": "."
     }
   },
-  "integration": "opencode",
-  "default_integration": "opencode"
+  "integration": "kilocode",
+  "default_integration": "kilocode"
 }
