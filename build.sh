@@ -286,7 +286,7 @@ _full_pipeline_image_name() {
 cli_push() {
   local image="$1"
   local ns="${K8S_NAMESPACE:-apps-ns}"
-  local registry_svc="floci-ecr-registry"
+  local registry_svc="floci-aws-ecr-registry"
   local local_port=5200
   local remote_port=5000
 
