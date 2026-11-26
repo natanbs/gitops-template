@@ -169,7 +169,7 @@ reachable.
   `es-vault-analyst`, `analyst-read-env`) is RETIRED as part of cleanup (D11).
 ### F9 — Infisical re-seed REMEDIATION of email paths (2026-09-02, operator-authorized)
 
-Using the operator-provided `INFISICAL_API_TOKEN` (never printed), the Infisical
+Using the operator-provided `INFISICAL_CLIENT_ID` + `INFISICAL_CLIENT_SECRET` (never printed), the Infisical
 org resolves to project **Emails** (`us.infisical.com`, env `dev`), containing 11
 secrets: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`,
 `TINYVALIDATOR_API_KEY`, `MAILBOXLAYER_API_KEY`, `HUNTER_API_KEY`,
