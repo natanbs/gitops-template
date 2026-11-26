@@ -68,7 +68,12 @@ AUTO_DEPLOY=false
 CONTINUE_ON_ERROR=false
 FORCE_OVERWRITE=false
 SKIP_TEMPLATE=false
-USE_CLI_PUSH=true
+# Push directly to the registry's host-published port (Floci publishes its
+# emulated ECR registry on 127.0.0.1:5100, e.g.
+# FLOCI_SERVICES_EKS_IMAGE_TEMPLATE=localhost:5100/k3s:v*). A kubectl
+# port-forward to a registry Service would be redundant — the emulated registry
+# is not a k8s workload, so no in-cluster Service exists to forward to.
+USE_CLI_PUSH=false
 CRONJOB="${CRONJOB:-false}"
 _FAILED_STEPS=()
 
@@ -287,7 +292,7 @@ cli_push() {
   local image="$1"
   local ns="${K8S_NAMESPACE:-apps-ns}"
   local registry_svc="floci-aws-ecr-registry"
-  local local_port=5200
+  local local_port=5100
   local remote_port=5000
 
   info "  Starting port-forward to $registry_svc:$remote_port on localhost:$local_port"

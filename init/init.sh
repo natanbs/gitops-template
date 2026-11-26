@@ -71,7 +71,7 @@ EOF
 # ── Defaults ─────────────────────────────────────────────────
 DOCKERFILE_TYPE="none"
 DEF_REGISTRY_URL="localhost"
-DEF_REGISTRY_PORT="50000"
+DEF_REGISTRY_PORT="5100"
 # In-cluster registry the cluster pulls from (see deploy.tmpl.yaml image:).
 # Distinct from the push target REGISTRY_URL; honours a shell-env override.
 DEF_REGISTRY_CLUSTER_URL="${REGISTRY_CLUSTER_URL:-k3d-reg}"
