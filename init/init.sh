@@ -72,9 +72,12 @@ EOF
 DOCKERFILE_TYPE="none"
 DEF_REGISTRY_URL="localhost"
 DEF_REGISTRY_PORT="5100"
-# In-cluster registry the cluster pulls from (see deploy.tmpl.yaml image:).
+# Registry name baked into k8s image: references (see deploy.tmpl.yaml image:).
+# This is the Docker-hosted emulated ECR (Floci publishes it on the host at
+# 127.0.0.1:5100 and the cluster's containerd mirrors this name to it) — it is
+# NOT a k8s workload, so there is no in-cluster registry Service.
 # Distinct from the push target REGISTRY_URL; honours a shell-env override.
-DEF_REGISTRY_CLUSTER_URL="${REGISTRY_CLUSTER_URL:-k3d-reg}"
+DEF_REGISTRY_CLUSTER_URL="${REGISTRY_CLUSTER_URL:-floci-aws-ecr-registry}"
 DEF_REGISTRY_CLUSTER_PORT="${REGISTRY_CLUSTER_PORT:-5000}"
 DEF_K8S_NAMESPACE="apps-ns"
 DEF_CONTAINER_PORT="8080"
@@ -176,7 +179,7 @@ if [ -f .env ]; then
   _APP_NAME="$(       grep -s '^APP_NAME='       .env | sed 's/^APP_NAME=//'       || echo "$APP_NAME")"
   _REGISTRY_URL="$(   grep -s '^REGISTRY_URL='   .env | sed 's/^REGISTRY_URL=//'   || echo "$DEF_REGISTRY_URL")"
   _REGISTRY_PORT="$(  grep -s '^REGISTRY_PORT='  .env | sed 's/^REGISTRY_PORT=//'  || echo "$DEF_REGISTRY_PORT")"
-  # Read the in-cluster registry so re-runs don't clobber user edits to .env
+  # Read the registry image-ref so re-runs don't clobber user edits to .env
   _REGISTRY_CLUSTER_URL="$( grep -s '^REGISTRY_CLUSTER_URL=' .env | sed 's/^REGISTRY_CLUSTER_URL=//' || echo "$DEF_REGISTRY_CLUSTER_URL")"
   _REGISTRY_CLUSTER_PORT="$( grep -s '^REGISTRY_CLUSTER_PORT=' .env | sed 's/^REGISTRY_CLUSTER_PORT=//' || echo "$DEF_REGISTRY_CLUSTER_PORT")"
   _REGISTRY_CLUSTER_URL="${_REGISTRY_CLUSTER_URL:-$DEF_REGISTRY_CLUSTER_URL}"

@@ -68,12 +68,12 @@ AUTO_DEPLOY=false
 CONTINUE_ON_ERROR=false
 FORCE_OVERWRITE=false
 SKIP_TEMPLATE=false
-# Push directly to the registry's host-published port (Floci publishes its
+# Pushes go straight to the registry's host-published port (Floci publishes its
 # emulated ECR registry on 127.0.0.1:5100, e.g.
-# FLOCI_SERVICES_EKS_IMAGE_TEMPLATE=localhost:5100/k3s:v*). A kubectl
-# port-forward to a registry Service would be redundant — the emulated registry
-# is not a k8s workload, so no in-cluster Service exists to forward to.
-USE_CLI_PUSH=false
+# FLOCI_SERVICES_EKS_IMAGE_TEMPLATE=localhost:5100/k3s:v*). The emulated ECR is a
+# Docker-hosted registry — there is deliberately no k8s Service/port-forward path
+# (none exists in the cluster, and the compose bridge ecr-registry-publish keeps
+# the host port stable).
 CRONJOB="${CRONJOB:-false}"
 _FAILED_STEPS=()
 
@@ -118,7 +118,6 @@ Optional:
   --skip-template       Skip K8s/ArgoCD template generation
                          (also auto-skipped in repos containing a
                          committed .gitops-platform marker file)
-  --use-cli-push        Push image via floci cli container (on cluster network)
                          Use when registry is not reachable from host (e.g., floci ECR)
   --help                Show this help message and exit
 
@@ -167,7 +166,6 @@ parse_args() {
       --continue-on-error) CONTINUE_ON_ERROR=true; shift ;;
       --force)             FORCE_OVERWRITE=true; shift ;;
       --skip-template)     SKIP_TEMPLATE=true; shift ;;
-      --use-cli-push)      USE_CLI_PUSH=true; shift ;;
       -h)                  show_help ;;
       --)                  shift; break ;;
       -*)
@@ -267,11 +265,7 @@ step_tag_push() {
   docker tag "${APP_NAME}:${IMAGE_TAG}" "$full_name" || return 1
 
   step "3. Pushing Image to Registry"
-  if [ "${USE_CLI_PUSH:-false}" = "true" ]; then
-    cli_push "$full_name" || return 1
-  else
-    docker push "$full_name" || return 1
-  fi
+  docker push "$full_name" || return 1
 
   export IMAGE_FULL_REF="$full_name"
 }
@@ -283,42 +277,6 @@ _full_pipeline_image_name() {
   else
     echo "${REGISTRY_URL}/tech-companies-pipeline:${IMAGE_TAG}"
   fi
-}
-
-# ── CLI container push helper ──────────────────────────────────────
-# When USE_CLI_PUSH=true, push via kubectl port-forward to the cluster registry.
-# This avoids needing docker CLI in the cli container.
-cli_push() {
-  local image="$1"
-  local ns="${K8S_NAMESPACE:-apps-ns}"
-  local registry_svc="floci-aws-ecr-registry"
-  local local_port=5100
-  local remote_port=5000
-
-  info "  Starting port-forward to $registry_svc:$remote_port on localhost:$local_port"
-  kubectl port-forward -n "$ns" "svc/$registry_svc" "$local_port:$remote_port" >/dev/null 2>&1 &
-  local pf_pid=$!
-
-  # Wait for port-forward to be ready
-  local retries=0
-  while ! nc -z localhost "$local_port" 2>/dev/null; do
-    sleep 0.2
-    retries=$((retries + 1))
-    if [ "$retries" -ge 50 ]; then
-      kill "$pf_pid" 2>/dev/null
-      error "  Port-forward failed to start"
-      return 1
-    fi
-  done
-
-  info "  Pushing $image via port-forward"
-  docker push "$image" || {
-    kill "$pf_pid" 2>/dev/null
-    return 1
-  }
-
-  kill "$pf_pid" 2>/dev/null
-  return 0
 }
 
 step_build_pipeline() {
@@ -334,11 +292,7 @@ step_tag_push_pipeline() {
   docker tag "tech-companies-pipeline:${IMAGE_TAG}" "$full_name" || return 1
 
   step "Pipeline: Pushing Image to Registry"
-  if [ "${USE_CLI_PUSH:-false}" = "true" ]; then
-    cli_push "$full_name" || return 1
-  else
-    docker push "$full_name" || return 1
-  fi
+  docker push "$full_name" || return 1
 }
 
 step_update_cronjob() {
