@@ -46,7 +46,7 @@ Options:
   --dockerfile TYPE    Scaffold a sample Dockerfile (go|python|node|none)
                        (default: none)
   --registry-url URL   Container registry hostname (default: localhost)
-  --registry-port PORT Container registry port (default: 50000)
+  --registry-port PORT Container registry port (default: 5100)
   --k8s-ns NS   Kubernetes namespace (default: apps-ns)
   --container-port PORT External service port (default: 8080)
   --build             Run build.sh after scaffolding (build + push)
